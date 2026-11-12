@@ -5,7 +5,9 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Callable, Sequence
 
-from ui.theme import COLORS, FONTS, PRIORITY_COLORS, SLA_COLORS, STATUS_COLORS, mix
+from ui.theme import (
+    COLORS, FONTS, PRIORITY_COLORS, SLA_COLORS, STATUS_COLORS, mix, px,
+)
 
 
 def flat_button(parent: tk.Misc, text: str, command: Callable[[], None],
@@ -26,6 +28,43 @@ class Page(tk.Frame):
     def __init__(self, parent: tk.Misc, app: Any):
         super().__init__(parent, bg=COLORS["bg"])
         self.app = app
+        self._jobs: list[str] = []
+        self.bind("<Destroy>", self._on_destroy, add="+")
+
+    def after(self, ms: int, func: Any = None, *args: Any) -> str:
+        """Schedule a callback and remember it so it can be cancelled."""
+        if func is None or not callable(func):
+            return super().after(ms, func, *args)
+        holder: list[str] = []
+
+        def _run() -> None:
+            if holder and holder[0] in self._jobs:
+                self._jobs.remove(holder[0])
+            func(*args)
+
+        job = super().after(ms, _run)
+        holder.append(job)
+        self._jobs.append(job)
+        return job
+
+    def after_cancel(self, job: str) -> None:
+        try:
+            super().after_cancel(job)
+        except tk.TclError:
+            pass
+        if job in self._jobs:
+            self._jobs.remove(job)
+
+    def _on_destroy(self, event: tk.Event) -> None:
+        """Cancel pending timers so nothing fires against a dead widget."""
+        if event.widget is not self:
+            return
+        for job in list(self._jobs):
+            try:
+                super().after_cancel(job)
+            except tk.TclError:
+                pass
+        self._jobs.clear()
 
     def on_show(self) -> None:  # pragma: no cover - overridden by pages
         pass
@@ -46,16 +85,18 @@ class Card(tk.Frame):
         )
         self._padding = padding
         if accent:
-            tk.Frame(self, bg=accent, height=3).pack(fill="x", side="top")
+            tk.Frame(self, bg=accent, height=px(3)).pack(fill="x", side="top")
         self.body = tk.Frame(self, bg=self.card_bg)
         if isinstance(padding, tuple):
             padx, pady = padding
         else:
             padx = pady = padding
-        self.body.pack(fill="both", expand=True, padx=padx, pady=pady)
+        self.body.pack(fill="both", expand=True, padx=px(padx), pady=px(pady))
 
 
 class KpiCard(Card):
+    """Metric card with an accent rail, icon tile, value and context line."""
+
     def __init__(self, parent: tk.Misc, label: str, accent: str,
                  icon: str = "•", hint: str = ""):
         super().__init__(parent, padding=(18, 15), accent=accent)
@@ -63,15 +104,17 @@ class KpiCard(Card):
         self.hint_var = tk.StringVar(value=hint)
         top = tk.Frame(self.body, bg=self.card_bg)
         top.pack(fill="x")
-        icon_tile = tk.Frame(top, bg=mix(self.card_bg, accent, 0.16), width=36, height=36)
+        tile_bg = mix(self.card_bg, accent, 0.16)
+        icon_tile = tk.Frame(top, bg=tile_bg, width=px(38), height=px(38))
         icon_tile.pack(side="left")
         icon_tile.pack_propagate(False)
-        tk.Label(icon_tile, text=icon, bg=mix(self.card_bg, accent, 0.16),
-                 fg=accent, font=(FONTS["body"].actual("family"), 14, "bold")).pack(expand=True)
+        tk.Label(icon_tile, text=icon, bg=tile_bg, fg=accent,
+                 font=(FONTS["h3"].actual("family"), 14, "bold")).pack(expand=True)
         tk.Label(top, text=label.upper(), bg=self.card_bg, fg=COLORS["muted"],
-                 font=FONTS["tiny"], anchor="w").pack(side="left", padx=(10, 0))
+                 font=FONTS["micro"], anchor="w").pack(side="left", padx=(px(11), 0))
         tk.Label(self.body, textvariable=self.value_var, bg=self.card_bg,
-                 fg=COLORS["text"], font=FONTS["kpi"], anchor="w").pack(fill="x", pady=(8, 0))
+                 fg=COLORS["text"], font=FONTS["kpi"], anchor="w").pack(
+            fill="x", pady=(px(9), 0))
         tk.Label(self.body, textvariable=self.hint_var, bg=self.card_bg,
                  fg=COLORS["subtle"], font=FONTS["tiny"], anchor="w").pack(fill="x")
 
@@ -92,7 +135,7 @@ class SectionHeader(tk.Frame):
                  font=FONTS["h2"], anchor="w").pack(fill="x")
         if subtitle:
             tk.Label(text, text=subtitle, bg=background, fg=COLORS["muted"],
-                     font=FONTS["small"], anchor="w").pack(fill="x", pady=(2, 0))
+                     font=FONTS["small"], anchor="w").pack(fill="x", pady=(px(3), 0))
         self.actions = tk.Frame(self, bg=background)
         self.actions.pack(side="right")
 
@@ -111,7 +154,7 @@ class Badge(tk.Label):
 
     def __init__(self, parent: tk.Misc, text: str = "", tone: str = "neutral",
                  bg: str | None = None, **kwargs):
-        super().__init__(parent, text=text, bd=0, padx=9, pady=3,
+        super().__init__(parent, text=text, bd=0, padx=px(9), pady=px(3),
                          font=FONTS["tiny"], anchor="center", **kwargs)
         self._card_bg = bg or COLORS["card"]
         self.set(text, tone)
@@ -171,9 +214,9 @@ class DataTable(tk.Frame):
         super().__init__(parent, bg=COLORS["card_soft"], bd=0,
                          highlightthickness=1, highlightbackground=COLORS["border_soft"])
         self.columns_spec = list(columns)
-        self._base_widths = [int(column.get("width", 120)) for column in self.columns_spec]
+        self._base_widths = [px(int(column.get("width", 120))) for column in self.columns_spec]
         self._min_widths = [
-            int(column.get("minwidth", 60)) for column in self.columns_spec
+            px(int(column.get("minwidth", 60))) for column in self.columns_spec
         ]
         self._payloads: dict[str, Any] = {}
         self._on_double_click = on_double_click
@@ -182,13 +225,13 @@ class DataTable(tk.Frame):
 
         self.tree = ttk.Treeview(self, columns=keys, show="headings",
                                  height=height, selectmode=selectmode)
-        for column in self.columns_spec:
+        for column, width in zip(self.columns_spec, self._base_widths):
             self.tree.heading(column["key"], text=column["label"],
                               anchor=column.get("heading_anchor", column.get("anchor", "w")))
             self.tree.column(
                 column["key"],
-                width=column.get("width", 120),
-                minwidth=column.get("minwidth", 60),
+                width=width,
+                minwidth=px(int(column.get("minwidth", 60))),
                 anchor=column.get("anchor", "w"),
                 stretch=False,
             )
@@ -196,8 +239,10 @@ class DataTable(tk.Frame):
         self.tree.bind("<Configure>", self._fit_columns, add="+")
         self.tree.tag_configure("row_odd", background=COLORS["card_soft"])
         self.tree.tag_configure("row_even", background="#0C1728")
-        self.tree.tag_configure("row_critical", background=mix(COLORS["card_soft"], COLORS["red"], 0.13))
-        self.tree.tag_configure("row_high", background=mix(COLORS["card_soft"], "#FB923C", 0.06))
+        self.tree.tag_configure("row_critical",
+                                background=mix(COLORS["card_soft"], COLORS["red"], 0.13))
+        self.tree.tag_configure("row_high",
+                                background=mix(COLORS["card_soft"], "#FB923C", 0.06))
         self.tree.tag_configure("sla_breach", foreground="#FCA5A5")
         self.tree.tag_configure("sla_risk", foreground="#FDE68A")
         self.tree.tag_configure("sla_met", foreground="#A7F3D0")
@@ -221,16 +266,17 @@ class DataTable(tk.Frame):
         tk.Label(self._empty, text="◌", bg=COLORS["card_soft"], fg=COLORS["border"],
                  font=(FONTS["h1"].actual("family"), 28)).pack()
         tk.Label(self._empty, text=empty_title, bg=COLORS["card_soft"],
-                 fg=COLORS["text_soft"], font=FONTS["semibold"]).pack(pady=(4, 0))
+                 fg=COLORS["text_soft"], font=FONTS["semibold"]).pack(pady=(px(4), 0))
         if empty_hint:
             tk.Label(self._empty, text=empty_hint, bg=COLORS["card_soft"],
-                     fg=COLORS["muted"], font=FONTS["small"]).pack(pady=(4, 0))
+                     fg=COLORS["muted"], font=FONTS["small"]).pack(pady=(px(4), 0))
 
         if on_double_click:
             self.tree.bind("<Double-1>", self._double_click)
             self.tree.bind("<Return>", self._double_click)
         if on_select:
             self.tree.bind("<<TreeviewSelect>>", self._select)
+        bind_scroll_handoff(self.tree)
 
         self.after_idle(self._fit_columns)
 
@@ -396,29 +442,80 @@ class ScrollableFrame(tk.Frame):
         self.canvas.yview_moveto(0)
 
 
-def _scroller_under(widget: tk.Misc | None) -> "ScrollableFrame | None":
-    """Return the scrollable ancestor of a widget, ignoring inner scrollers."""
+def _scroller_under(widget: tk.Misc | None,
+                    skip_scrollable: bool = False) -> "ScrollableFrame | None":
+    """Return the scrollable ancestor of a widget, ignoring inner scrollers.
+
+    Scrollable widgets (tables, text boxes, lists) normally absorb the mouse
+    wheel themselves. With ``skip_scrollable`` the search continues past them
+    so the surrounding page scroller can take over at the scroll limits.
+    """
     while widget is not None:
         if isinstance(widget, (ttk.Treeview, tk.Text, tk.Listbox)):
-            return None
-        if isinstance(widget, ScrollableFrame):
+            if not skip_scrollable:
+                return None
+        elif isinstance(widget, ScrollableFrame):
             return widget
         widget = getattr(widget, "master", None)
     return None
 
 
+def _can_scroll(widget: tk.Misc, units: int) -> bool:
+    """True when the widget still has content in the requested direction."""
+    try:
+        first, last = widget.yview()
+        first = float(first)
+        last = float(last)
+    except (tk.TclError, ValueError, TypeError):
+        return False
+    if units < 0:
+        return first > 0.001
+    return last < 0.999
+
+
+def bind_scroll_handoff(widget: tk.Misc) -> None:
+    """Route the mouse wheel from a scrollable widget to its page scroller.
+
+    The widget scrolls itself while it still has content; once it reaches its
+    limit the surrounding page scroller takes over, so a table that fills the
+    viewport never traps the user.
+    """
+
+    def _handler(event: tk.Event) -> str | None:
+        units = int(-event.delta / 120) if event.delta else 0
+        if units == 0:
+            return None
+        if _can_scroll(widget, units):
+            try:
+                widget.yview_scroll(units, "units")
+            except tk.TclError:
+                return None
+            return "break"
+        scroller = _scroller_under(widget, skip_scrollable=True)
+        if scroller is not None and scroller.canvas.winfo_exists():
+            scroller.canvas.yview_scroll(units, "units")
+            return "break"
+        return None
+
+    widget.bind("<MouseWheel>", _handler)
+
+
 def _route_mousewheel(event: tk.Event) -> str | None:
-    scroller = _scroller_under(event.widget)
+    units = int(-event.delta / 120) if event.delta else 0
+    if units == 0:
+        return None
+    scroller = _scroller_under(event.widget, skip_scrollable=True)
     if scroller is not None and scroller.canvas.winfo_exists():
-        scroller.canvas.yview_scroll(int(-event.delta / 120), "units")
+        scroller.canvas.yview_scroll(units, "units")
         return "break"
     return None
 
 
 def _route_mousewheel_linux(event: tk.Event) -> str | None:
-    scroller = _scroller_under(event.widget)
+    units = -1 if event.num == 4 else 1
+    scroller = _scroller_under(event.widget, skip_scrollable=True)
     if scroller is not None and scroller.canvas.winfo_exists():
-        scroller.canvas.yview_scroll(-1 if event.num == 4 else 1, "units")
+        scroller.canvas.yview_scroll(units, "units")
         return "break"
     return None
 
@@ -429,7 +526,7 @@ class Meter(tk.Canvas):
     def __init__(self, parent: tk.Misc, width: int = 220, height: int = 8,
                  bg: str | None = None):
         self._bg = bg or COLORS["card"]
-        super().__init__(parent, width=width, height=height, bg=self._bg,
+        super().__init__(parent, width=px(width), height=px(height), bg=self._bg,
                          highlightthickness=0, bd=0)
         self._percent = 0.0
         self._color = COLORS["accent"]
@@ -453,16 +550,16 @@ class Meter(tk.Canvas):
 class SidebarItem(tk.Frame):
     def __init__(self, parent: tk.Misc, key: str, label: str, icon: str,
                  command: Callable[[str], None]):
-        super().__init__(parent, bg=COLORS["sidebar"], height=46, cursor="hand2")
+        super().__init__(parent, bg=COLORS["sidebar"], height=px(46), cursor="hand2")
         self.key = key
         self.command = command
         self.active = False
         self.pack_propagate(False)
-        self.bar = tk.Frame(self, bg=COLORS["sidebar"], width=3)
+        self.bar = tk.Frame(self, bg=COLORS["sidebar"], width=px(3))
         self.bar.pack(side="left", fill="y")
         self.icon = tk.Label(self, text=icon, bg=COLORS["sidebar"], fg=COLORS["subtle"],
-                             font=(FONTS["body"].actual("family"), 13), width=3)
-        self.icon.pack(side="left", padx=(10, 0))
+                             font=FONTS["h3"], width=3)
+        self.icon.pack(side="left", padx=(px(10), 0))
         self.label = tk.Label(self, text=label, bg=COLORS["sidebar"], fg=COLORS["muted"],
                               font=FONTS["small"], anchor="w")
         self.label.pack(side="left", fill="x", expand=True)
@@ -529,6 +626,6 @@ def audit_tag(action: str) -> str:
 
 
 def divider(parent: tk.Misc, bg: str | None = None) -> tk.Frame:
-    line = tk.Frame(parent, bg=bg or COLORS["border_soft"], height=1)
+    line = tk.Frame(parent, bg=bg or COLORS["border_soft"], height=px(1))
     line.pack(fill="x")
     return line

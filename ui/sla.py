@@ -15,7 +15,7 @@ from ui.components import (
     Badge, Card, DataTable, KpiCard, Page, ScrollableFrame, SectionHeader,
     flat_button, ticket_row_tags,
 )
-from ui.theme import COLORS, FONTS, SLA_COLORS
+from ui.theme import COLORS, FONTS, SLA_COLORS, px
 
 
 class SLAPage(Page):
@@ -26,20 +26,20 @@ class SLAPage(Page):
         self.scroller = ScrollableFrame(self)
         self.scroller.pack(fill="both", expand=True)
         outer = tk.Frame(self.scroller.content, bg=COLORS["bg"])
-        outer.pack(fill="both", expand=True, padx=26, pady=20)
+        outer.pack(fill="both", expand=True, padx=px(26), pady=px(20))
 
         header = SectionHeader(
             outer, "SLA center",
             "Configure deterministic response and resolution targets, then monitor live risk.",
         )
-        header.pack(fill="x", pady=(0, 16))
+        header.pack(fill="x", pady=(0, px(16)))
         flat_button(header.actions, "Export SLA report", self.export_report,
-                    "secondary").pack(side="right", padx=(8, 0))
+                    "secondary").pack(side="right", padx=(px(8), 0))
         flat_button(header.actions, "Run SLA scan", self.run_scan, "primary").pack(
             side="right")
 
         kpis = tk.Frame(outer, bg=COLORS["bg"])
-        kpis.pack(fill="x", pady=(0, 16))
+        kpis.pack(fill="x", pady=(0, px(16)))
         for column in range(4):
             kpis.grid_columnconfigure(column, weight=1, uniform="sla-kpi")
         self.kpi_response = KpiCard(kpis, "Response compliance", COLORS["accent"], "↺",
@@ -54,12 +54,12 @@ class SLAPage(Page):
             (self.kpi_response, self.kpi_resolution, self.kpi_risk, self.kpi_breach)
         ):
             card.grid(row=0, column=index, sticky="nsew",
-                      padx=(0 if index == 0 else 6, 0))
+                      padx=(0 if index == 0 else px(6), 0))
 
         policy_card = Card(outer, padding=(18, 15))
-        policy_card.pack(fill="x", pady=(0, 16))
+        policy_card.pack(fill="x", pady=(0, px(16)))
         policy_header = tk.Frame(policy_card.body, bg=COLORS["card"])
-        policy_header.pack(fill="x", pady=(0, 10))
+        policy_header.pack(fill="x", pady=(0, px(10)))
         policy_text = tk.Frame(policy_header, bg=COLORS["card"])
         policy_text.pack(side="left", fill="x", expand=True)
         tk.Label(policy_text, text="SLA policies", bg=COLORS["card"], fg=COLORS["text"],
@@ -68,13 +68,13 @@ class SLAPage(Page):
             policy_text,
             text="Targets start at ticket creation. Saving a policy recalculates active tickets and writes an audit event.",
             bg=COLORS["card"], fg=COLORS["muted"], font=FONTS["tiny"], anchor="w",
-        ).pack(fill="x", pady=(2, 0))
+        ).pack(fill="x", pady=(px(2), 0))
         flat_button(policy_header, "Reset defaults", self.stage_defaults, "ghost").pack(
-            side="right", padx=(0, 8))
+            side="right", padx=(0, px(8)))
         flat_button(policy_header, "Recalculate active", self.recalculate_active,
-                    "secondary").pack(side="right", padx=(0, 8))
+                    "secondary").pack(side="right", padx=(0, px(8)))
         flat_button(policy_header, "Save policies", self.save_policies, "primary").pack(
-            side="right", padx=(0, 8))
+            side="right", padx=(0, px(8)))
 
         grid = tk.Frame(policy_card.body, bg=COLORS["card"])
         grid.pack(fill="x")
@@ -84,15 +84,15 @@ class SLAPage(Page):
                     "AT-RISK WARNING", "LAST UPDATED"]
         for column, label in enumerate(headings):
             tk.Label(grid, text=label, bg=COLORS["card"], fg=COLORS["subtle"],
-                     font=FONTS["tiny"], anchor="w").grid(
-                row=0, column=column, sticky="ew", padx=(0, 10), pady=(0, 6))
+                     font=FONTS["micro"], anchor="w").grid(
+                row=0, column=column, sticky="ew", padx=(0, px(10)), pady=(0, px(6)))
 
         for row_index, priority in enumerate(PRIORITIES, start=1):
-            tk.Frame(grid, bg=COLORS["border_soft"], height=1).grid(
-                row=row_index * 2 - 1, column=0, columnspan=5, sticky="ew", pady=4)
+            tk.Frame(grid, bg=COLORS["border_soft"], height=px(1)).grid(
+                row=row_index * 2 - 1, column=0, columnspan=5, sticky="ew", pady=px(4))
             badge = Badge(grid, priority, bg=COLORS["card"])
             badge.set_priority(priority)
-            badge.grid(row=row_index * 2, column=0, sticky="w", padx=(0, 10), pady=7)
+            badge.grid(row=row_index * 2, column=0, sticky="w", padx=(0, px(10)), pady=px(7))
             values = {
                 "response": tk.StringVar(),
                 "resolution": tk.StringVar(),
@@ -100,20 +100,20 @@ class SLAPage(Page):
             }
             self.policy_vars[priority] = values
             response_box = tk.Frame(grid, bg=COLORS["card"])
-            response_box.grid(row=row_index * 2, column=1, sticky="w", padx=(0, 10))
+            response_box.grid(row=row_index * 2, column=1, sticky="w", padx=(0, px(10)))
             ttk.Entry(response_box, textvariable=values["response"], width=8).pack(side="left")
             tk.Label(response_box, text="min", bg=COLORS["card"], fg=COLORS["subtle"],
-                     font=FONTS["tiny"]).pack(side="left", padx=(5, 0))
+                     font=FONTS["tiny"]).pack(side="left", padx=(px(5), 0))
             resolution_box = tk.Frame(grid, bg=COLORS["card"])
-            resolution_box.grid(row=row_index * 2, column=2, sticky="w", padx=(0, 10))
+            resolution_box.grid(row=row_index * 2, column=2, sticky="w", padx=(0, px(10)))
             ttk.Entry(resolution_box, textvariable=values["resolution"], width=8).pack(side="left")
             tk.Label(resolution_box, text="min", bg=COLORS["card"], fg=COLORS["subtle"],
-                     font=FONTS["tiny"]).pack(side="left", padx=(5, 0))
+                     font=FONTS["tiny"]).pack(side="left", padx=(px(5), 0))
             warn_box = tk.Frame(grid, bg=COLORS["card"])
-            warn_box.grid(row=row_index * 2, column=3, sticky="w", padx=(0, 10))
+            warn_box.grid(row=row_index * 2, column=3, sticky="w", padx=(0, px(10)))
             ttk.Entry(warn_box, textvariable=values["warn"], width=7).pack(side="left")
             tk.Label(warn_box, text="% consumed", bg=COLORS["card"], fg=COLORS["subtle"],
-                     font=FONTS["tiny"]).pack(side="left", padx=(5, 0))
+                     font=FONTS["tiny"]).pack(side="left", padx=(px(5), 0))
             updated = tk.Label(grid, textvariable=tk.StringVar(), bg=COLORS["card"],
                                fg=COLORS["muted"], font=FONTS["tiny"], anchor="w")
             updated.grid(row=row_index * 2, column=4, sticky="w")
@@ -124,19 +124,19 @@ class SLAPage(Page):
             policy_card.body, textvariable=self.policy_message_var, bg=COLORS["card"],
             fg=COLORS["green"], font=FONTS["small"], anchor="w",
         )
-        self.policy_message.pack(fill="x", pady=(10, 0))
+        self.policy_message.pack(fill="x", pady=(px(10), 0))
 
         monitor_card = Card(outer, padding=(18, 15))
         monitor_card.pack(fill="both", expand=True)
         monitor_header = tk.Frame(monitor_card.body, bg=COLORS["card"])
-        monitor_header.pack(fill="x", pady=(0, 10))
+        monitor_header.pack(fill="x", pady=(0, px(10)))
         monitor_text = tk.Frame(monitor_header, bg=COLORS["card"])
         monitor_text.pack(side="left", fill="x", expand=True)
         tk.Label(monitor_text, text="Active SLA monitor", bg=COLORS["card"],
                  fg=COLORS["text"], font=FONTS["h2"], anchor="w").pack(fill="x")
         tk.Label(monitor_text, text="Only unresolved tickets have a live deadline clock.",
                  bg=COLORS["card"], fg=COLORS["muted"], font=FONTS["tiny"],
-                 anchor="w").pack(fill="x", pady=(2, 0))
+                 anchor="w").pack(fill="x", pady=(px(2), 0))
         self.state_var = tk.StringVar(value="All active")
         state_combo = ttk.Combobox(
             monitor_header, textvariable=self.state_var, state="readonly",
@@ -146,7 +146,7 @@ class SLAPage(Page):
         state_combo.bind("<<ComboboxSelected>>", lambda _event: self._render_monitor())
         self.monitor_count_var = tk.StringVar(value="")
         tk.Label(monitor_header, textvariable=self.monitor_count_var, bg=COLORS["card"],
-                 fg=COLORS["muted"], font=FONTS["tiny"]).pack(side="right", padx=(0, 12))
+                 fg=COLORS["muted"], font=FONTS["tiny"]).pack(side="right", padx=(0, px(12)))
 
         self.monitor_table = DataTable(
             monitor_card.body,
@@ -174,8 +174,8 @@ class SLAPage(Page):
                  "resolution compliance uses the resolved timestamp. Breached means the deadline "
                  "has passed with no completion timestamp.",
             bg=COLORS["bg"], fg=COLORS["subtle"], font=FONTS["tiny"],
-            justify="left", wraplength=1000,
-        ).pack(fill="x", pady=(10, 2))
+            justify="left", wraplength=px(1000),
+        ).pack(fill="x", pady=(px(10), px(2)))
 
     # ---------------------------------------------------------------- policies
     def _load_policy_values(self) -> None:

@@ -9,12 +9,12 @@ from ui.components import (
     Badge, Card, DataTable, KpiCard, Page, ScrollableFrame, SectionHeader,
     flat_button, ticket_row_tags,
 )
-from ui.theme import COLORS, FONTS, PRIORITY_COLORS, SLA_COLORS, STATUS_COLORS, mix
+from ui.theme import COLORS, FONTS, PRIORITY_COLORS, SLA_COLORS, STATUS_COLORS, mix, px
 
 
 class DonutChart(tk.Canvas):
     def __init__(self, parent: tk.Misc):
-        super().__init__(parent, bg=COLORS["card"], highlightthickness=0, height=210)
+        super().__init__(parent, bg=COLORS["card"], highlightthickness=0, height=px(210))
         self.data: dict[str, int] = {}
         self.bind("<Configure>", lambda _event: self.draw())
 
@@ -26,12 +26,13 @@ class DonutChart(tk.Canvas):
         self.delete("all")
         width = self.winfo_width()
         height = self.winfo_height()
-        if width < 80 or height < 80:
+        if width < px(140) or height < px(90):
             return
         total = sum(self.data.values())
-        cx, cy = 108, height // 2
-        radius = min(72, height // 2 - 26)
-        ring = 18
+        ring = max(px(12), px(18))
+        radius = max(px(34), min(height * 0.32, width * 0.23))
+        cx = min(radius + ring + px(22), width * 0.38)
+        cy = height / 2
         if total == 0:
             self.create_oval(cx - radius, cy - radius, cx + radius, cy + radius,
                              outline=COLORS["border"], width=ring)
@@ -46,27 +47,29 @@ class DonutChart(tk.Canvas):
                                 outline=STATUS_COLORS.get(status, COLORS["muted"]),
                                 width=ring)
                 start += extent
-        self.create_text(cx, cy - 8, text=str(total), fill=COLORS["text"],
+        self.create_text(cx, cy - px(9), text=str(total), fill=COLORS["text"],
                          font=FONTS["kpi"])
-        self.create_text(cx, cy + 20, text="TICKETS", fill=COLORS["subtle"],
-                         font=FONTS["tiny"])
+        self.create_text(cx, cy + px(20), text="TICKETS", fill=COLORS["subtle"],
+                         font=FONTS["micro"])
 
-        legend_x = min(width - 120, 218)
-        legend_y = max(18, (height - len(self.data) * 27) // 2)
+        spacing = px(27)
+        legend_x = max(cx + radius + ring + px(28), width * 0.56)
+        legend_x = min(legend_x, width - px(120))
+        legend_y = max(px(16), (height - len(self.data) * spacing) // 2)
         for index, (status, count) in enumerate(self.data.items()):
-            y = legend_y + index * 27
+            y = legend_y + index * spacing
             color = STATUS_COLORS.get(status, COLORS["muted"])
-            self.create_oval(legend_x, y + 4, legend_x + 8, y + 12,
+            self.create_oval(legend_x, y + px(3), legend_x + px(8), y + px(11),
                              fill=color, outline="")
-            self.create_text(legend_x + 16, y, text=status, anchor="nw",
+            self.create_text(legend_x + px(16), y, text=status, anchor="nw",
                              fill=COLORS["muted"], font=FONTS["small"])
-            self.create_text(width - 14, y, text=str(count), anchor="ne",
+            self.create_text(width - px(14), y, text=str(count), anchor="ne",
                              fill=COLORS["text"], font=FONTS["small"])
 
 
 class PriorityBars(tk.Canvas):
     def __init__(self, parent: tk.Misc):
-        super().__init__(parent, bg=COLORS["card"], highlightthickness=0, height=210)
+        super().__init__(parent, bg=COLORS["card"], highlightthickness=0, height=px(210))
         self.data: dict[str, int] = {}
         self.bind("<Configure>", lambda _event: self.draw())
 
@@ -78,7 +81,7 @@ class PriorityBars(tk.Canvas):
         self.delete("all")
         width = self.winfo_width()
         height = self.winfo_height()
-        if width < 100 or height < 80:
+        if width < px(150) or height < px(90):
             return
         total = sum(self.data.values())
         if total == 0:
@@ -86,28 +89,28 @@ class PriorityBars(tk.Canvas):
                              fill=COLORS["subtle"], font=FONTS["small"])
             return
         maximum = max(self.data.values()) or 1
-        left = 82
-        right = width - 34
-        row_height = min(40, max(30, (height - 24) // max(1, len(self.data))))
+        left = px(82)
+        right = width - px(34)
+        row_height = min(px(40), max(px(30), (height - px(24)) // max(1, len(self.data))))
         start_y = (height - row_height * len(self.data)) // 2
         for index, (priority, count) in enumerate(self.data.items()):
             y = start_y + index * row_height
             color = PRIORITY_COLORS.get(priority, COLORS["muted"])
-            self.create_text(left - 12, y + row_height / 2 - 6, text=priority,
+            self.create_text(left - px(12), y + row_height / 2 - px(6), text=priority,
                              anchor="e", fill=COLORS["muted"], font=FONTS["small"])
-            self.create_rectangle(left, y + 9, right, y + 23,
+            self.create_rectangle(left, y + px(9), right, y + px(23),
                                   fill=COLORS["card_soft"], outline="")
             bar_width = max(2, (count / maximum) * (right - left))
             if count:
-                self.create_rectangle(left, y + 9, left + bar_width, y + 23,
+                self.create_rectangle(left, y + px(9), left + bar_width, y + px(23),
                                       fill=color, outline="")
-            self.create_text(right + 8, y + row_height / 2 - 6, text=str(count),
+            self.create_text(right + px(8), y + row_height / 2 - px(6), text=str(count),
                              anchor="w", fill=COLORS["text_soft"], font=FONTS["small"])
 
 
 class TrendChart(tk.Canvas):
     def __init__(self, parent: tk.Misc):
-        super().__init__(parent, bg=COLORS["card"], highlightthickness=0, height=210)
+        super().__init__(parent, bg=COLORS["card"], highlightthickness=0, height=px(210))
         self.points: list[dict[str, Any]] = []
         self.bind("<Configure>", lambda _event: self.draw())
 
@@ -119,9 +122,10 @@ class TrendChart(tk.Canvas):
         self.delete("all")
         width = self.winfo_width()
         height = self.winfo_height()
-        if width < 140 or height < 100 or not self.points:
+        if width < px(160) or height < px(100) or not self.points:
             return
-        left, right, top, bottom = 34, width - 16, 34, height - 28
+        left, right = px(38), width - px(16)
+        top, bottom = px(38), height - px(28)
         maximum = max(
             [1] + [int(point["created"]) for point in self.points]
             + [int(point["resolved"]) for point in self.points]
@@ -129,8 +133,8 @@ class TrendChart(tk.Canvas):
         for step in range(5):
             y = top + (bottom - top) * step / 4
             self.create_line(left, y, right, y, fill=COLORS["grid"])
-            self.create_text(left - 7, y, text=str(round(maximum * (4 - step) / 4)),
-                             anchor="e", fill=COLORS["subtle"], font=FONTS["tiny"])
+            self.create_text(left - px(7), y, text=str(round(maximum * (4 - step) / 4)),
+                             anchor="e", fill=COLORS["subtle"], font=FONTS["micro"])
         count = len(self.points)
         x_positions = [
             left + (right - left) * (index / max(1, count - 1))
@@ -148,19 +152,21 @@ class TrendChart(tk.Canvas):
                 y = bottom - (value / maximum) * (bottom - top)
                 coords.extend([x, y])
             if len(coords) >= 4:
-                self.create_line(*coords, fill=color, width=2, smooth=True)
+                self.create_line(*coords, fill=color, width=max(2, px(2)), smooth=True)
             for index, point in enumerate(self.points):
                 x = x_positions[index]
                 value = int(point.get(key, 0))
                 y = bottom - (value / maximum) * (bottom - top)
-                self.create_oval(x - 3, y - 3, x + 3, y + 3, fill=color, outline="")
-            legend_x = right - 150 + series_index * 76
-            self.create_line(legend_x, 14, legend_x + 12, 14, fill=color, width=2)
-            self.create_text(legend_x + 17, 14, text=label, anchor="w",
-                             fill=COLORS["subtle"], font=FONTS["tiny"])
+                dot = max(2, px(3))
+                self.create_oval(x - dot, y - dot, x + dot, y + dot, fill=color, outline="")
+            legend_x = right - px(160) + series_index * px(78)
+            self.create_line(legend_x, px(14), legend_x + px(12), px(14),
+                             fill=color, width=max(2, px(2)))
+            self.create_text(legend_x + px(17), px(14), text=label, anchor="w",
+                             fill=COLORS["subtle"], font=FONTS["micro"])
         for index, point in enumerate(self.points):
-            self.create_text(x_positions[index], height - 12, text=point["label"],
-                             fill=COLORS["subtle"], font=FONTS["tiny"])
+            self.create_text(x_positions[index], height - px(12), text=point["label"],
+                             fill=COLORS["subtle"], font=FONTS["micro"])
 
 
 class DashboardPage(Page):
@@ -169,21 +175,21 @@ class DashboardPage(Page):
         self.scroller = ScrollableFrame(self)
         self.scroller.pack(fill="both", expand=True)
         outer = tk.Frame(self.scroller.content, bg=COLORS["bg"])
-        outer.pack(fill="both", expand=True, padx=26, pady=22)
+        outer.pack(fill="both", expand=True, padx=px(26), pady=px(22))
 
         header = SectionHeader(
             outer, "Command center",
             "Live workload, SLA health and operational activity across the queue.",
         )
-        header.pack(fill="x", pady=(0, 18))
+        header.pack(fill="x", pady=(0, px(18)))
         self.updated_var = tk.StringVar(value="Not refreshed")
         tk.Label(header.actions, textvariable=self.updated_var, bg=COLORS["bg"],
-                 fg=COLORS["subtle"], font=FONTS["tiny"]).pack(side="left", padx=(0, 12))
+                 fg=COLORS["subtle"], font=FONTS["tiny"]).pack(side="left", padx=(0, px(12)))
         flat_button(header.actions, "Refresh dashboard", self.refresh,
                     "secondary").pack(side="left")
 
         kpis = tk.Frame(outer, bg=COLORS["bg"])
-        kpis.pack(fill="x", pady=(0, 16))
+        kpis.pack(fill="x", pady=(0, px(16)))
         for column in range(4):
             kpis.grid_columnconfigure(column, weight=1, uniform="kpi")
         self.kpi_total = KpiCard(kpis, "Total tickets", COLORS["blue"], "▦", "All tickets")
@@ -200,38 +206,38 @@ class DashboardPage(Page):
         ]
         for index, card in enumerate(self._kpis):
             card.grid(row=index // 4, column=index % 4, sticky="nsew",
-                      padx=(0 if index % 4 == 0 else 6, 0),
-                      pady=(0, 7) if index < 4 else (7, 0))
+                      padx=(0 if index % 4 == 0 else px(6), 0),
+                      pady=(0, px(7)) if index < 4 else (px(7), 0))
 
         charts = tk.Frame(outer, bg=COLORS["bg"])
-        charts.pack(fill="x", pady=(0, 16))
+        charts.pack(fill="x", pady=(0, px(16)))
         charts.grid_columnconfigure(0, weight=1, uniform="charts")
         charts.grid_columnconfigure(1, weight=1, uniform="charts")
         charts.grid_columnconfigure(2, weight=1, uniform="charts")
         status_card = Card(charts, padding=(16, 13))
-        status_card.grid(row=0, column=0, sticky="nsew", padx=(0, 6))
+        status_card.grid(row=0, column=0, sticky="nsew", padx=(0, px(6)))
         priority_card = Card(charts, padding=(16, 13))
-        priority_card.grid(row=0, column=1, sticky="nsew", padx=6)
+        priority_card.grid(row=0, column=1, sticky="nsew", padx=px(6))
         trend_card = Card(charts, padding=(16, 13))
-        trend_card.grid(row=0, column=2, sticky="nsew", padx=(6, 0))
+        trend_card.grid(row=0, column=2, sticky="nsew", padx=(px(6), 0))
         self._chart_header(status_card, "Ticket status", "Current queue mix")
         self._chart_header(priority_card, "Priority mix", "Open and completed")
         self._chart_header(trend_card, "7-day flow", "Created vs resolved")
         self.donut = DonutChart(status_card.body)
-        self.donut.pack(fill="both", expand=True, pady=(6, 0))
+        self.donut.pack(fill="both", expand=True, pady=(px(6), 0))
         self.priority_bars = PriorityBars(priority_card.body)
-        self.priority_bars.pack(fill="both", expand=True, pady=(6, 0))
+        self.priority_bars.pack(fill="both", expand=True, pady=(px(6), 0))
         self.trend = TrendChart(trend_card.body)
-        self.trend.pack(fill="both", expand=True, pady=(6, 0))
+        self.trend.pack(fill="both", expand=True, pady=(px(6), 0))
 
         bottom = tk.Frame(outer, bg=COLORS["bg"])
         bottom.pack(fill="both", expand=True)
         bottom.grid_columnconfigure(0, weight=3, uniform="bottom")
         bottom.grid_columnconfigure(1, weight=2, uniform="bottom")
         watch_card = Card(bottom, padding=(16, 14))
-        watch_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        watch_card.grid(row=0, column=0, sticky="nsew", padx=(0, px(8)))
         activity_card = Card(bottom, padding=(16, 14))
-        activity_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        activity_card.grid(row=0, column=1, sticky="nsew", padx=(px(8), 0))
 
         watch_header = self._chart_header(
             watch_card, "SLA watchlist", "Active tickets closest to a breach",
@@ -253,7 +259,7 @@ class DashboardPage(Page):
             empty_title="No SLA risk right now",
             empty_hint="At-risk and breached tickets will appear here.",
         )
-        self.watch_table.pack(fill="both", expand=True, pady=(10, 0))
+        self.watch_table.pack(fill="both", expand=True, pady=(px(10), 0))
 
         activity_header = self._chart_header(
             activity_card, "Recent activity", "Latest audited ticket updates",
@@ -261,7 +267,7 @@ class DashboardPage(Page):
         flat_button(activity_header, "Audit trail", lambda: self.app.show_page("audit"),
                     "link").pack(side="right")
         self.activity_container = tk.Frame(activity_card.body, bg=COLORS["card"])
-        self.activity_container.pack(fill="both", expand=True, pady=(8, 0))
+        self.activity_container.pack(fill="both", expand=True, pady=(px(8), 0))
 
     @staticmethod
     def _chart_header(card: Card, title: str, subtitle: str) -> tk.Frame:
@@ -272,7 +278,7 @@ class DashboardPage(Page):
         tk.Label(text, text=title, bg=COLORS["card"], fg=COLORS["text"],
                  font=FONTS["semibold"], anchor="w").pack(fill="x")
         tk.Label(text, text=subtitle, bg=COLORS["card"], fg=COLORS["subtle"],
-                 font=FONTS["tiny"], anchor="w").pack(fill="x")
+                 font=FONTS["tiny"], anchor="w").pack(fill="x", pady=(px(1), 0))
         return row
 
     def _open_ticket(self, ticket_id: str) -> None:
@@ -349,7 +355,7 @@ class DashboardPage(Page):
         if not events:
             tk.Label(self.activity_container, text="No activity recorded yet.",
                      bg=COLORS["card"], fg=COLORS["muted"],
-                     font=FONTS["small"]).pack(anchor="w", pady=12)
+                     font=FONTS["small"]).pack(anchor="w", pady=px(12))
             return
         action_labels = {
             "TICKET_CREATED": ("Created", COLORS["accent"]),
@@ -368,10 +374,10 @@ class DashboardPage(Page):
         }
         for event in events:
             row = tk.Frame(self.activity_container, bg=COLORS["card"])
-            row.pack(fill="x", pady=(0, 9))
+            row.pack(fill="x", pady=(0, px(9)))
             label, color = action_labels.get(
                 event.action, (event.action.replace("_", " ").title(), COLORS["muted"]))
-            tk.Frame(row, bg=color, width=3).pack(side="left", fill="y", padx=(0, 9))
+            tk.Frame(row, bg=color, width=px(3)).pack(side="left", fill="y", padx=(0, px(9)))
             body = tk.Frame(row, bg=COLORS["card"])
             body.pack(side="left", fill="x", expand=True)
             top = tk.Frame(body, bg=COLORS["card"])
@@ -385,4 +391,4 @@ class DashboardPage(Page):
                      fg=COLORS["subtle"], font=FONTS["tiny"]).pack(side="right")
             tk.Label(body, text=truncate(event.details, 100), bg=COLORS["card"],
                      fg=COLORS["muted"], font=FONTS["small"], anchor="w",
-                     justify="left", wraplength=360).pack(fill="x")
+                     justify="left", wraplength=px(360)).pack(fill="x")

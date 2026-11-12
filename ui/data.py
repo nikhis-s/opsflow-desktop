@@ -12,7 +12,7 @@ from typing import Any, Callable
 from services.csv_service import CSVFormatError
 from ui.components import Card, Page, ScrollableFrame, SectionHeader, flat_button
 from ui.dialogs import ImportSummaryDialog
-from ui.theme import COLORS, FONTS
+from ui.theme import COLORS, FONTS, px
 
 
 class DataPage(Page):
@@ -22,47 +22,47 @@ class DataPage(Page):
         self.scroller = ScrollableFrame(self)
         self.scroller.pack(fill="both", expand=True)
         outer = tk.Frame(self.scroller.content, bg=COLORS["bg"])
-        outer.pack(fill="both", expand=True, padx=26, pady=20)
+        outer.pack(fill="both", expand=True, padx=px(26), pady=px(20))
 
         header = SectionHeader(
             outer, "Data exchange",
             "Import validated ticket data, export operational reports and manage the local database.",
         )
-        header.pack(fill="x", pady=(0, 16))
+        header.pack(fill="x", pady=(0, px(16)))
 
         top = tk.Frame(outer, bg=COLORS["bg"])
-        top.pack(fill="x", pady=(0, 16))
+        top.pack(fill="x", pady=(0, px(16)))
         top.grid_columnconfigure(0, weight=3, uniform="data-top")
         top.grid_columnconfigure(1, weight=2, uniform="data-top")
 
         import_card = Card(top, padding=(20, 17), accent=COLORS["accent"])
-        import_card.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        import_card.grid(row=0, column=0, sticky="nsew", padx=(0, px(8)))
         tk.Label(import_card.body, text="IMPORT TICKETS", bg=COLORS["card"],
                  fg=COLORS["accent"], font=FONTS["tiny"]).pack(anchor="w")
         tk.Label(import_card.body, text="CSV import with row-level validation",
                  bg=COLORS["card"], fg=COLORS["text"], font=FONTS["h2"]).pack(
-            anchor="w", pady=(4, 4))
+            anchor="w", pady=(px(4), px(4)))
         tk.Label(
             import_card.body,
             text="Required columns: title, requester and priority. Missing deadlines are calculated "
                  "from the applicable SLA policy. Duplicate ticket IDs are skipped, and every rejected "
                  "row is reported individually.",
             bg=COLORS["card"], fg=COLORS["muted"], font=FONTS["small"],
-            justify="left", wraplength=630,
+            justify="left", wraplength=px(630),
         ).pack(anchor="w")
         import_buttons = tk.Frame(import_card.body, bg=COLORS["card"])
-        import_buttons.pack(fill="x", pady=(12, 0))
+        import_buttons.pack(fill="x", pady=(px(12), 0))
         flat_button(import_buttons, "Choose CSV file", self.import_csv, "primary").pack(
             side="left")
         flat_button(import_buttons, "Download template", self.download_template,
-                    "secondary").pack(side="left", padx=(8, 0))
+                    "secondary").pack(side="left", padx=(px(8), 0))
         self.import_summary_var = tk.StringVar(value=self._last_import_summary)
         tk.Label(import_card.body, textvariable=self.import_summary_var, bg=COLORS["card"],
                  fg=COLORS["subtle"], font=FONTS["tiny"], anchor="w").pack(
-            fill="x", pady=(10, 0))
+            fill="x", pady=(px(10), 0))
 
         rules_card = Card(top, padding=(20, 17), bg=COLORS["surface"])
-        rules_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        rules_card.grid(row=0, column=1, sticky="nsew", padx=(px(8), 0))
         tk.Label(rules_card.body, text="IMPORT RULES", bg=COLORS["surface"],
                  fg=COLORS["subtle"], font=FONTS["tiny"]).pack(anchor="w")
         rules = (
@@ -74,12 +74,12 @@ class DataPage(Page):
             "• Valid rows import independently; errors are listed"
         )
         tk.Label(rules_card.body, text=rules, bg=COLORS["surface"], fg=COLORS["text_soft"],
-                 font=FONTS["small"], justify="left").pack(anchor="w", pady=(8, 0))
+                 font=FONTS["small"], justify="left").pack(anchor="w", pady=(px(8), 0))
 
         tk.Label(outer, text="EXPORTS", bg=COLORS["bg"], fg=COLORS["subtle"],
-                 font=FONTS["tiny"]).pack(anchor="w", pady=(0, 6))
+                 font=FONTS["tiny"]).pack(anchor="w", pady=(0, px(6)))
         exports = tk.Frame(outer, bg=COLORS["bg"])
-        exports.pack(fill="x", pady=(0, 16))
+        exports.pack(fill="x", pady=(0, px(16)))
         for column in range(2):
             exports.grid_columnconfigure(column, weight=1, uniform="exports")
         self.export_count_vars: dict[str, tk.StringVar] = {}
@@ -96,11 +96,12 @@ class DataPage(Page):
         for index, (key, title, description, accent, command) in enumerate(export_specs):
             card = Card(exports, padding=(18, 15))
             card.grid(row=index // 2, column=index % 2, sticky="nsew",
-                      padx=(0, 6) if index % 2 == 0 else (6, 0),
-                      pady=(0, 8) if index < 2 else (8, 0))
+                      padx=(0, px(6)) if index % 2 == 0 else (px(6), 0),
+                      pady=(0, px(8)) if index < 2 else (px(8), 0))
             top_row = tk.Frame(card.body, bg=COLORS["card"])
             top_row.pack(fill="x")
-            tk.Frame(top_row, bg=accent, width=3, height=32).pack(side="left", padx=(0, 10))
+            tk.Frame(top_row, bg=accent, width=px(3), height=px(32)).pack(
+                side="left", padx=(0, px(10)))
             text = tk.Frame(top_row, bg=COLORS["card"])
             text.pack(side="left", fill="x", expand=True)
             tk.Label(text, text=title, bg=COLORS["card"], fg=COLORS["text"],
@@ -111,22 +112,22 @@ class DataPage(Page):
                      font=FONTS["tiny"], anchor="w").pack(fill="x")
             tk.Label(card.body, text=description, bg=COLORS["card"], fg=COLORS["muted"],
                      font=FONTS["small"], anchor="w", justify="left").pack(
-                fill="x", pady=(8, 10))
+                fill="x", pady=(px(8), px(10)))
             flat_button(card.body, "Export CSV", command, "secondary").pack(anchor="e")
 
         db_card = Card(outer, padding=(20, 17))
         db_card.pack(fill="x")
         db_header = tk.Frame(db_card.body, bg=COLORS["card"])
-        db_header.pack(fill="x", pady=(0, 8))
+        db_header.pack(fill="x", pady=(0, px(8)))
         db_text = tk.Frame(db_header, bg=COLORS["card"])
         db_text.pack(side="left", fill="x", expand=True)
         tk.Label(db_text, text="Local database", bg=COLORS["card"], fg=COLORS["text"],
                  font=FONTS["h2"], anchor="w").pack(fill="x")
         tk.Label(db_text, text="SQLite · persistent across restarts · offline only",
                  bg=COLORS["card"], fg=COLORS["muted"], font=FONTS["tiny"],
-                 anchor="w").pack(fill="x", pady=(2, 0))
+                 anchor="w").pack(fill="x", pady=(px(2), 0))
         flat_button(db_header, "Open data folder", self.open_folder, "ghost").pack(
-            side="right", padx=(8, 0))
+            side="right", padx=(px(8), 0))
         flat_button(db_header, "Backup now", self.backup_now, "secondary").pack(side="right")
 
         self.db_path_var = tk.StringVar(value="")
@@ -134,19 +135,19 @@ class DataPage(Page):
         self.backup_var = tk.StringVar(value="")
         tk.Label(db_card.body, textvariable=self.db_path_var, bg=COLORS["card"],
                  fg=COLORS["text_soft"], font=FONTS["mono"], anchor="w").pack(
-            fill="x", pady=(2, 4))
+            fill="x", pady=(px(2), px(4)))
         tk.Label(db_card.body, textvariable=self.db_info_var, bg=COLORS["card"],
                  fg=COLORS["muted"], font=FONTS["small"], anchor="w").pack(fill="x")
         tk.Label(db_card.body, textvariable=self.backup_var, bg=COLORS["card"],
                  fg=COLORS["subtle"], font=FONTS["tiny"], anchor="w").pack(
-            fill="x", pady=(4, 0))
+            fill="x", pady=(px(4), 0))
 
         tk.Label(
             outer,
             text="OpsFlow runs entirely offline. No external API credentials, cloud services or "
                  "notification providers are used.",
             bg=COLORS["bg"], fg=COLORS["subtle"], font=FONTS["tiny"],
-        ).pack(fill="x", pady=(12, 2))
+        ).pack(fill="x", pady=(px(12), px(2)))
 
     # ---------------------------------------------------------------- updates
     def on_show(self) -> None:

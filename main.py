@@ -16,6 +16,27 @@ from config import APP_NAME, APP_VERSION, get_log_path
 from database import Database, DatabaseError
 
 
+def enable_dpi_awareness() -> None:
+    """Opt into per-monitor DPI awareness on Windows before Tk starts.
+
+    Without this, Windows bitmap-scales the whole window on high-DPI displays,
+    which makes text and Canvas charts look soft. Tk still needs its point
+    scaling set (done in :func:`ui.theme.apply_theme`).
+    """
+    if sys.platform != "win32":
+        return
+    try:
+        import ctypes
+
+        try:
+            # PROCESS_PER_MONITOR_DPI_AWARE (Windows 8.1+).
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        except Exception:
+            ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
+
+
 def configure_logging() -> None:
     try:
         log_path = get_log_path()
@@ -45,6 +66,7 @@ def _show_startup_error(title: str, message: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    enable_dpi_awareness()
     parser = argparse.ArgumentParser(
         prog="opsflow",
         description="OpsFlow — offline operations and SLA management desktop app.",

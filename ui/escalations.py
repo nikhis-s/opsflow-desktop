@@ -10,9 +10,9 @@ from typing import Any
 from models import EscalationEvent, format_local, human_duration, truncate
 from ui.components import (
     Card, DataTable, KpiCard, Page, ScrollableFrame, SectionHeader,
-    flat_button,
+    bind_scroll_handoff, flat_button,
 )
-from ui.theme import COLORS, FONTS, SLA_COLORS
+from ui.theme import COLORS, FONTS, SLA_COLORS, px
 
 
 class EscalationsPage(Page):
@@ -22,32 +22,32 @@ class EscalationsPage(Page):
         self.scroller = ScrollableFrame(self)
         self.scroller.pack(fill="both", expand=True)
         outer = tk.Frame(self.scroller.content, bg=COLORS["bg"])
-        outer.pack(fill="both", expand=True, padx=26, pady=20)
+        outer.pack(fill="both", expand=True, padx=px(26), pady=px(20))
 
         header = SectionHeader(
             outer, "Escalation desk",
             "Deterministic SLA alerts, critical ticket watch and recorded escalation history.",
         )
-        header.pack(fill="x", pady=(0, 12))
+        header.pack(fill="x", pady=(0, px(12)))
         flat_button(header.actions, "Export history", self.export_history,
-                    "secondary").pack(side="right", padx=(8, 0))
+                    "secondary").pack(side="right", padx=(px(8), 0))
         flat_button(header.actions, "Run escalation scan", self.run_scan, "primary").pack(
             side="right")
 
         banner = tk.Frame(outer, bg=COLORS["card"], highlightthickness=1,
                           highlightbackground=COLORS["amber_deep"])
-        banner.pack(fill="x", pady=(0, 16))
+        banner.pack(fill="x", pady=(0, px(16)))
         tk.Label(banner, text="INTERNAL ONLY", bg=COLORS["card"], fg=COLORS["amber"],
-                 font=FONTS["tiny"]).pack(side="left", padx=(14, 10), pady=10)
+                 font=FONTS["tiny"]).pack(side="left", padx=(px(14), px(10)), pady=px(10))
         tk.Label(
             banner,
             text="OpsFlow records escalations inside this application. It does not send emails, pages or "
                  "external notifications, and never claims a person was contacted.",
             bg=COLORS["card"], fg=COLORS["muted"], font=FONTS["small"],
-        ).pack(side="left", fill="x", expand=True, pady=10)
+        ).pack(side="left", fill="x", expand=True, pady=px(10))
 
         kpis = tk.Frame(outer, bg=COLORS["bg"])
-        kpis.pack(fill="x", pady=(0, 16))
+        kpis.pack(fill="x", pady=(0, px(16)))
         for column in range(4):
             kpis.grid_columnconfigure(column, weight=1, uniform="esc-kpi")
         self.kpi_total = KpiCard(kpis, "Recorded escalations", COLORS["blue"], "▲",
@@ -62,12 +62,12 @@ class EscalationsPage(Page):
             (self.kpi_total, self.kpi_critical, self.kpi_warning, self.kpi_watch)
         ):
             card.grid(row=0, column=index, sticky="nsew",
-                      padx=(0 if index == 0 else 6, 0))
+                      padx=(0 if index == 0 else px(6), 0))
 
         watch_card = Card(outer, padding=(18, 15))
-        watch_card.pack(fill="x", pady=(0, 16))
+        watch_card.pack(fill="x", pady=(0, px(16)))
         watch_header = tk.Frame(watch_card.body, bg=COLORS["card"])
-        watch_header.pack(fill="x", pady=(0, 8))
+        watch_header.pack(fill="x", pady=(0, px(8)))
         watch_text = tk.Frame(watch_header, bg=COLORS["card"])
         watch_text.pack(side="left", fill="x", expand=True)
         tk.Label(watch_text, text="Critical unresolved watchlist", bg=COLORS["card"],
@@ -76,7 +76,7 @@ class EscalationsPage(Page):
             watch_text,
             text="Every critical-priority ticket still unresolved, ordered by resolution deadline.",
             bg=COLORS["card"], fg=COLORS["muted"], font=FONTS["tiny"], anchor="w",
-        ).pack(fill="x", pady=(2, 0))
+        ).pack(fill="x", pady=(px(2), 0))
         self.watch_count = tk.StringVar(value="")
         tk.Label(watch_header, textvariable=self.watch_count, bg=COLORS["card"],
                  fg=COLORS["muted"], font=FONTS["tiny"]).pack(side="right")
@@ -102,7 +102,7 @@ class EscalationsPage(Page):
         history_card = Card(outer, padding=(18, 15))
         history_card.pack(fill="both", expand=True)
         history_header = tk.Frame(history_card.body, bg=COLORS["card"])
-        history_header.pack(fill="x", pady=(0, 10))
+        history_header.pack(fill="x", pady=(0, px(10)))
         history_text = tk.Frame(history_header, bg=COLORS["card"])
         history_text.pack(side="left", fill="x", expand=True)
         tk.Label(history_text, text="Escalation history", bg=COLORS["card"],
@@ -111,26 +111,26 @@ class EscalationsPage(Page):
             history_text,
             text="Each reason is deterministic. Duplicate alerts for the same deadline are suppressed.",
             bg=COLORS["card"], fg=COLORS["muted"], font=FONTS["tiny"], anchor="w",
-        ).pack(fill="x", pady=(2, 0))
+        ).pack(fill="x", pady=(px(2), 0))
         self.level_var = tk.StringVar(value="All levels")
         self.level_combo = ttk.Combobox(
             history_header, textvariable=self.level_var, state="readonly", width=14,
             values=["All levels", "CRITICAL", "WARNING", "INFO"],
         )
-        self.level_combo.pack(side="right", padx=(8, 0))
+        self.level_combo.pack(side="right", padx=(px(8), 0))
         self.level_combo.bind("<<ComboboxSelected>>", lambda _event: self.refresh_history())
 
         filter_row = tk.Frame(history_card.body, bg=COLORS["card"])
-        filter_row.pack(fill="x", pady=(0, 8))
+        filter_row.pack(fill="x", pady=(0, px(8)))
         self.search_var = tk.StringVar()
         search = ttk.Entry(filter_row, textvariable=self.search_var, style="Search.TEntry")
         search.pack(side="left", fill="x", expand=True)
         search.bind("<KeyRelease>", self._schedule_search)
         flat_button(filter_row, "Clear", self._clear_search, "ghost").pack(
-            side="right", padx=(8, 0))
+            side="right", padx=(px(8), 0))
         self.history_count = tk.StringVar(value="")
         tk.Label(filter_row, textvariable=self.history_count, bg=COLORS["card"],
-                 fg=COLORS["muted"], font=FONTS["tiny"]).pack(side="right", padx=(0, 10))
+                 fg=COLORS["muted"], font=FONTS["tiny"]).pack(side="right", padx=(0, px(10)))
 
         self.history_table = DataTable(
             history_card.body,
@@ -152,13 +152,14 @@ class EscalationsPage(Page):
         detail_frame = tk.Frame(history_card.body, bg=COLORS["card_soft"],
                                 highlightthickness=1,
                                 highlightbackground=COLORS["border_soft"])
-        detail_frame.pack(fill="x", pady=(10, 0))
+        detail_frame.pack(fill="x", pady=(px(10), 0))
         self.detail_text = tk.Text(
             detail_frame, height=4, wrap="word", bg=COLORS["card_soft"],
-            fg=COLORS["text_soft"], relief="flat", bd=0, padx=12, pady=9,
+            fg=COLORS["text_soft"], relief="flat", bd=0, padx=px(12), pady=px(9),
             font=FONTS["small"], highlightthickness=0,
         )
         self.detail_text.pack(fill="x")
+        bind_scroll_handoff(self.detail_text)
         self.detail_text.insert("1.0", "Select an escalation to view its full recorded reason and context.")
         self.detail_text.configure(state="disabled", fg=COLORS["muted"])
 

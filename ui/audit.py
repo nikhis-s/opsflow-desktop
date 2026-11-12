@@ -9,9 +9,10 @@ from typing import Any
 
 from models import AuditEvent, format_local, parse_user_timestamp
 from ui.components import (
-    Card, DataTable, Page, SectionHeader, audit_tag, flat_button,
+    Card, DataTable, Page, ScrollableFrame, SectionHeader, audit_tag,
+    bind_scroll_handoff, flat_button,
 )
-from ui.theme import COLORS, FONTS
+from ui.theme import COLORS, FONTS, px
 
 
 class AuditPage(Page):
@@ -19,19 +20,21 @@ class AuditPage(Page):
         super().__init__(parent, app)
         self._events: list[AuditEvent] = []
         self._search_job: str | None = None
-        outer = tk.Frame(self, bg=COLORS["bg"])
-        outer.pack(fill="both", expand=True, padx=26, pady=20)
+        self.scroller = ScrollableFrame(self)
+        self.scroller.pack(fill="both", expand=True)
+        outer = tk.Frame(self.scroller.content, bg=COLORS["bg"])
+        outer.pack(fill="both", expand=True, padx=px(26), pady=px(20))
 
         header = SectionHeader(
             outer, "Audit trail",
             "Immutable history of ticket creation, field changes, notes, SLA events and escalations.",
         )
-        header.pack(fill="x", pady=(0, 14))
+        header.pack(fill="x", pady=(0, px(14)))
         flat_button(header.actions, "Export audit CSV", self.export_audit,
                     "secondary").pack(side="right")
 
         filters = Card(outer, padding=(14, 10), bg=COLORS["surface"])
-        filters.pack(fill="x", pady=(0, 12))
+        filters.pack(fill="x", pady=(0, px(12)))
         grid = filters.body
         weights = (4, 3, 2, 2, 2, 0)
         for column, weight in enumerate(weights):
@@ -39,44 +42,44 @@ class AuditPage(Page):
         labels = ["SEARCH", "ACTION", "TICKET ID", "FROM", "TO"]
         for column, label in enumerate(labels):
             tk.Label(grid, text=label, bg=COLORS["surface"], fg=COLORS["subtle"],
-                     font=FONTS["tiny"], anchor="w").grid(
-                row=0, column=column, sticky="ew", padx=(0, 8), pady=(0, 4))
+                     font=FONTS["micro"], anchor="w").grid(
+                row=0, column=column, sticky="ew", padx=(0, px(8)), pady=(0, px(5)))
 
         self.search_var = tk.StringVar()
         search = ttk.Entry(grid, textvariable=self.search_var, style="Search.TEntry")
-        search.grid(row=1, column=0, sticky="ew", padx=(0, 8))
+        search.grid(row=1, column=0, sticky="ew", padx=(0, px(8)))
         search.bind("<KeyRelease>", self._schedule_search)
         search.bind("<Return>", lambda _event: self.refresh())
 
         self.action_var = tk.StringVar(value="All actions")
         self.action_combo = ttk.Combobox(grid, textvariable=self.action_var,
                                          state="readonly")
-        self.action_combo.grid(row=1, column=1, sticky="ew", padx=(0, 8))
+        self.action_combo.grid(row=1, column=1, sticky="ew", padx=(0, px(8)))
         self.action_combo.bind("<<ComboboxSelected>>", lambda _event: self.refresh())
 
         self.ticket_var = tk.StringVar()
         ticket_entry = ttk.Entry(grid, textvariable=self.ticket_var)
-        ticket_entry.grid(row=1, column=2, sticky="ew", padx=(0, 8))
+        ticket_entry.grid(row=1, column=2, sticky="ew", padx=(0, px(8)))
         ticket_entry.bind("<Return>", lambda _event: self.refresh())
 
         self.from_var = tk.StringVar()
         from_entry = ttk.Entry(grid, textvariable=self.from_var)
-        from_entry.grid(row=1, column=3, sticky="ew", padx=(0, 8))
+        from_entry.grid(row=1, column=3, sticky="ew", padx=(0, px(8)))
         from_entry.bind("<Return>", lambda _event: self.refresh())
         self.to_var = tk.StringVar()
         to_entry = ttk.Entry(grid, textvariable=self.to_var)
-        to_entry.grid(row=1, column=4, sticky="ew", padx=(0, 8))
+        to_entry.grid(row=1, column=4, sticky="ew", padx=(0, px(8)))
         to_entry.bind("<Return>", lambda _event: self.refresh())
 
         buttons = tk.Frame(grid, bg=COLORS["surface"])
         buttons.grid(row=1, column=5, sticky="e")
         flat_button(buttons, "Apply", self.refresh, "secondary").pack(side="left")
         flat_button(buttons, "Clear", self.clear_filters, "ghost").pack(
-            side="left", padx=(6, 0))
+            side="left", padx=(px(6), 0))
         self.filter_note = tk.StringVar(value="Dates use your local timezone · YYYY-MM-DD")
         tk.Label(filters.body, textvariable=self.filter_note, bg=COLORS["surface"],
                  fg=COLORS["subtle"], font=FONTS["tiny"], anchor="w").grid(
-            row=2, column=0, columnspan=6, sticky="ew", pady=(6, 0))
+            row=2, column=0, columnspan=6, sticky="ew", pady=(px(6), 0))
 
         table_card = Card(outer, padding=(2, 2))
         table_card.pack(fill="both", expand=True)
@@ -90,7 +93,7 @@ class AuditPage(Page):
                  "minwidth": 300},
                 {"key": "actor", "label": "ACTOR", "width": 118},
             ],
-            height=14,
+            height=16,
             on_select=self._show_event,
             on_double_click=self._open_ticket,
             empty_title="No audit events match",
@@ -100,24 +103,25 @@ class AuditPage(Page):
 
         detail_card = Card(outer, padding=(14, 10), bg=COLORS["card_soft"],
                            border=COLORS["border_soft"])
-        detail_card.pack(fill="x", pady=(10, 0))
+        detail_card.pack(fill="x", pady=(px(10), 0))
         self.detail_text = tk.Text(
             detail_card.body, height=4, wrap="word", bg=COLORS["card_soft"],
             fg=COLORS["text_soft"], relief="flat", bd=0, padx=0, pady=0,
             font=FONTS["small"], highlightthickness=0,
         )
         self.detail_text.pack(fill="x")
+        bind_scroll_handoff(self.detail_text)
         self.detail_text.insert("1.0", "Select an audit event to inspect its full details.")
         self.detail_text.configure(state="disabled", fg=COLORS["muted"])
 
         bottom = tk.Frame(outer, bg=COLORS["bg"])
-        bottom.pack(fill="x", pady=(8, 0))
+        bottom.pack(fill="x", pady=(px(8), 0))
         self.count_var = tk.StringVar(value="0 events")
         tk.Label(bottom, textvariable=self.count_var, bg=COLORS["bg"], fg=COLORS["muted"],
                  font=FONTS["small"]).pack(side="left")
         self.total_var = tk.StringVar(value="")
         tk.Label(bottom, textvariable=self.total_var, bg=COLORS["bg"], fg=COLORS["subtle"],
-                 font=FONTS["tiny"]).pack(side="left", padx=(12, 0))
+                 font=FONTS["tiny"]).pack(side="left", padx=(px(12), 0))
 
     # --------------------------------------------------------------- filters
     def on_show(self) -> None:

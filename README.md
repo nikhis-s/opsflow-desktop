@@ -8,17 +8,12 @@ single dark-themed Tkinter application.
 There is no web stack, no JavaScript, no cloud dependency, no AI/LLM integration,
 and no external notification channel. Everything runs locally against SQLite.
 
-> This repository is the **Python/Tkinter desktop application only**. The separate
-> OpsFlow Mobile PWA is a different product, lives in a different repository, and is
-> not part of this codebase.
-
 ## Requirements
 
 - Python **3.11 or newer** (developed and tested on Python 3.12.10)
 - Tkinter, included with the standard Windows/macOS Python installers and available
   through the `python3-tk` package on most Linux distributions
 - No third-party packages are required at runtime
-
 ## Launch
 
 From the project root:
@@ -71,10 +66,31 @@ If an existing database is opened, a backup is made before any schema migration.
   horizontal-scroll fallback, backups before migration, and graceful startup error
   handling.
 
+## Desktop interface
+
+The window is built for a real operations desk rather than a demo shell.
+
+- **DPI aware** — the app opts into per-monitor DPI awareness on Windows before
+  Tk starts, so text and charts stay crisp instead of being bitmap-scaled. A
+  single scale factor derived from the display DPI (`ui/theme.py: px()`) drives
+  every spacing, control height, table row height, canvas geometry and dialog
+  size, so the layout keeps its proportions from 96 DPI up to 4K.
+- **Fits the screen** — window and dialog dimensions are clamped to the
+  available display area, and every page scrolls when its content is taller than
+  the viewport, so nothing is ever cut off on a 1366×768 laptop.
+- **Smart mouse wheel** — a table scrolls itself first and hands the wheel to
+  the page scroller once it reaches its limit, so a full-height table never
+  traps the pointer.
+- **Live canvas charts** — the donut, priority-bar and trend charts are drawn
+  with Tk's `Canvas` at runtime and re-render on resize; there are no image
+  assets to ship or blur.
+- **Keyboard driven** — `Ctrl+N` new ticket, `Ctrl+F` focus search, `F5` or
+  `Ctrl+R` refresh, `Alt+1`–`Alt+6` jump between pages.
+
 ## Project structure
 
 ```
-opsflow-desktop/
+opsflow/
 ├── main.py                    # entry point, CLI and logging setup
 ├── config.py                  # app metadata and data-directory resolution
 ├── database.py                # SQLite schema, transactions, backup and migration
@@ -91,7 +107,7 @@ opsflow-desktop/
 │   └── csv_service.py         # validated import and report export
 ├── ui/
 │   ├── app.py                 # shell, sidebar, shortcuts, scheduled scans
-│   ├── theme.py               # dark navy/cyan theme and ttk styles
+│   ├── theme.py               # dark navy/cyan theme, ttk styles, DPI scaling
 │   ├── components.py          # cards, responsive tables, charts, scrollers
 │   ├── dashboard.py
 │   ├── tickets.py
@@ -129,7 +145,10 @@ python -m unittest discover -v
 
 The suite covers models, database initialization/migration/backup, ticket
 lifecycle, SLA evaluation and compliance, escalation deduplication, audit history,
-analytics, CSV import/export validation, and a Tkinter UI smoke test.
+analytics, CSV import/export validation, and a Tkinter UI smoke test that builds
+the real shell, opens every page, exercises an SLA scan and checks mouse-wheel
+routing. It runs in about 11 seconds and needs no display server beyond a normal
+desktop session.
 
 ## Known limitations
 

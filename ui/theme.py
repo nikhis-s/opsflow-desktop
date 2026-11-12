@@ -1,4 +1,11 @@
-"""Central dark theme and reusable styling for OpsFlow."""
+"""Central dark theme and reusable styling for OpsFlow.
+
+The theme is DPI aware: :func:`configure_scaling` measures the display and
+:func:`px` converts design pixels into physical pixels. Tk font sizes are
+declared in points, so they scale with the display automatically; spacing,
+control heights and canvas geometry use :func:`px` so the layout keeps its
+proportions on 1080p, 1440p and 4K displays.
+"""
 from __future__ import annotations
 
 import tkinter as tk
@@ -60,10 +67,39 @@ SLA_COLORS = {
 
 FONTS: dict[str, tkfont.Font] = {}
 
+#: Multiplier applied to design pixels. 1.0 at 96 DPI, 1.5 at 144 DPI, 2.0 at 192 DPI.
+SCALE: float = 1.0
+MIN_SCALE = 1.0
+MAX_SCALE = 2.0
+
+
+def px(value: float) -> int:
+    """Convert a design pixel value into a physical pixel value."""
+    return max(1, int(round(float(value) * SCALE)))
+
+
+def configure_scaling(root: tk.Misc) -> float:
+    """Detect the display DPI, align Tk's point scaling and update :data:`SCALE`."""
+    global SCALE
+    try:
+        dpi = float(root.winfo_fpixels("1i"))
+    except (tk.TclError, ValueError):
+        dpi = 96.0
+    if dpi <= 0:
+        dpi = 96.0
+    SCALE = max(MIN_SCALE, min(MAX_SCALE, dpi / 96.0))
+    try:
+        # Tk expects pixels-per-point here (96 DPI == 1.333).
+        root.tk.call("tk", "scaling", dpi / 72.0)
+    except tk.TclError:
+        pass
+    return SCALE
+
 
 def _font_family(root: tk.Misc) -> str:
     available = set(tkfont.families(root))
-    for candidate in ("Segoe UI Variable", "Segoe UI", "Inter", "Helvetica Neue", "Arial"):
+    for candidate in ("Segoe UI Variable Display", "Segoe UI Variable",
+                      "Segoe UI", "Inter", "Helvetica Neue", "Arial"):
         if candidate in available:
             return candidate
     return "TkDefaultFont"
@@ -71,7 +107,8 @@ def _font_family(root: tk.Misc) -> str:
 
 def _mono_family(root: tk.Misc) -> str:
     available = set(tkfont.families(root))
-    for candidate in ("Cascadia Mono", "Consolas", "JetBrains Mono", "Courier New"):
+    for candidate in ("Cascadia Mono", "Cascadia Code", "Consolas",
+                      "JetBrains Mono", "Courier New"):
         if candidate in available:
             return candidate
     return "TkFixedFont"
@@ -86,18 +123,20 @@ def mix(color_a: str, color_b: str, factor: float) -> str:
 
 
 def apply_theme(root: tk.Tk) -> ttk.Style:
+    configure_scaling(root)
     family = _font_family(root)
     mono = _mono_family(root)
     for name, size, weight in (
         ("body", 10, "normal"),
         ("small", 9, "normal"),
         ("tiny", 8, "normal"),
+        ("micro", 7, "normal"),
         ("medium", 10, "bold"),
         ("semibold", 11, "bold"),
-        ("h1", 23, "bold"),
+        ("h1", 24, "bold"),
         ("h2", 16, "bold"),
         ("h3", 13, "bold"),
-        ("kpi", 26, "bold"),
+        ("kpi", 30, "bold"),
         ("mono", 9, "normal"),
     ):
         FONTS[name] = tkfont.Font(root=root, family=mono if name == "mono" else family,
@@ -159,13 +198,13 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
     style.configure("CardKpi.TLabel", background=COLORS["card"], foreground=COLORS["text"],
                     font=FONTS["kpi"])
     style.configure("CardEyebrow.TLabel", background=COLORS["card"], foreground=COLORS["subtle"],
-                    font=FONTS["tiny"])
+                    font=FONTS["micro"])
 
-    # Buttons
+    # Buttons -----------------------------------------------------------------
     style.configure(
         "Accent.TButton",
         background=COLORS["accent"], foreground="#04141C",
-        borderwidth=0, focusthickness=0, padding=(16, 9),
+        borderwidth=0, focusthickness=0, padding=(px(18), px(9)),
         font=FONTS["medium"],
     )
     style.map(
@@ -178,7 +217,7 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
         "Secondary.TButton",
         background=COLORS["card_alt"], foreground=COLORS["text_soft"],
         borderwidth=1, bordercolor=COLORS["border"], lightcolor=COLORS["border"],
-        darkcolor=COLORS["border"], padding=(14, 8), font=FONTS["small"],
+        darkcolor=COLORS["border"], padding=(px(15), px(8)), font=FONTS["small"],
     )
     style.map(
         "Secondary.TButton",
@@ -190,7 +229,7 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
     style.configure(
         "Ghost.TButton",
         background=COLORS["card"], foreground=COLORS["muted"],
-        borderwidth=0, padding=(10, 7), font=FONTS["small"],
+        borderwidth=0, padding=(px(11), px(7)), font=FONTS["small"],
     )
     style.map("Ghost.TButton",
               background=[("active", COLORS["card_alt"])],
@@ -198,24 +237,24 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
     style.configure(
         "Danger.TButton",
         background=COLORS["red_deep"], foreground="#FECACA",
-        borderwidth=0, padding=(14, 8), font=FONTS["small"],
+        borderwidth=0, padding=(px(15), px(8)), font=FONTS["small"],
     )
     style.map("Danger.TButton", background=[("active", "#991B1B"), ("pressed", "#7F1D1D")])
     style.configure(
         "Link.TButton",
         background=COLORS["card"], foreground=COLORS["accent"],
-        borderwidth=0, padding=(4, 2), font=FONTS["small"],
+        borderwidth=0, padding=(px(5), px(2)), font=FONTS["small"],
     )
     style.map("Link.TButton", background=[("active", COLORS["card"])],
               foreground=[("active", COLORS["accent_hover"])])
 
-    # Inputs
+    # Inputs ------------------------------------------------------------------
     style.configure(
         "TEntry",
         fieldbackground=COLORS["card_soft"], foreground=COLORS["text"],
         insertcolor=COLORS["accent"], bordercolor=COLORS["border"],
         lightcolor=COLORS["border"], darkcolor=COLORS["border"],
-        padding=(10, 7), relief="flat",
+        padding=(px(11), px(8)), relief="flat",
     )
     style.map("TEntry",
               bordercolor=[("focus", COLORS["accent_deep"])],
@@ -228,7 +267,7 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
         fieldbackground=COLORS["card_soft"], foreground=COLORS["text"],
         insertcolor=COLORS["accent"], bordercolor=COLORS["border_soft"],
         lightcolor=COLORS["border_soft"], darkcolor=COLORS["border_soft"],
-        padding=(12, 8),
+        padding=(px(13), px(9)),
     )
     style.map("Search.TEntry", bordercolor=[("focus", COLORS["accent_deep"])],
               lightcolor=[("focus", COLORS["accent_deep"])],
@@ -239,7 +278,7 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
         fieldbackground=COLORS["card_soft"], background=COLORS["card_alt"],
         foreground=COLORS["text"], arrowcolor=COLORS["muted"],
         bordercolor=COLORS["border"], lightcolor=COLORS["border"],
-        darkcolor=COLORS["border"], padding=(8, 7), relief="flat",
+        darkcolor=COLORS["border"], padding=(px(9), px(8)), relief="flat",
     )
     style.map(
         "TCombobox",
@@ -250,16 +289,17 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
         bordercolor=[("focus", COLORS["accent_deep"])],
     )
 
+    # Tables ------------------------------------------------------------------
     style.configure(
         "Treeview",
         background=COLORS["card_soft"], fieldbackground=COLORS["card_soft"],
         foreground=COLORS["text_soft"], borderwidth=0, relief="flat",
-        rowheight=35, font=FONTS["small"],
+        rowheight=px(36), font=FONTS["small"],
     )
     style.configure(
         "Treeview.Heading",
         background=COLORS["surface"], foreground=COLORS["muted"],
-        relief="flat", borderwidth=0, padding=(10, 9), font=FONTS["tiny"],
+        relief="flat", borderwidth=0, padding=(px(12), px(10)), font=FONTS["micro"],
     )
     style.map(
         "Treeview.Heading",
@@ -280,7 +320,7 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
         background=COLORS["card_alt"], troughcolor=COLORS["card_soft"],
         bordercolor=COLORS["card_soft"], arrowcolor=COLORS["subtle"],
         lightcolor=COLORS["card_alt"], darkcolor=COLORS["card_alt"],
-        width=12, arrowsize=10,
+        width=px(12), arrowsize=px(10),
     )
     style.map("Vertical.TScrollbar", background=[("active", COLORS["border"])])
     style.configure(
@@ -288,7 +328,7 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
         background=COLORS["card_alt"], troughcolor=COLORS["card_soft"],
         bordercolor=COLORS["card_soft"], arrowcolor=COLORS["subtle"],
         lightcolor=COLORS["card_alt"], darkcolor=COLORS["card_alt"],
-        arrowsize=10,
+        arrowsize=px(10),
     )
 
     style.configure("TSeparator", background=COLORS["border_soft"])
@@ -301,12 +341,12 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
     style.configure("TNotebook", background=COLORS["card"], borderwidth=0,
                     tabmargins=(0, 0, 0, 0))
     style.configure("TNotebook.Tab", background=COLORS["card_soft"],
-                    foreground=COLORS["muted"], padding=(16, 8),
+                    foreground=COLORS["muted"], padding=(px(18), px(9)),
                     font=FONTS["small"], borderwidth=0)
     style.map("TNotebook.Tab",
               background=[("selected", COLORS["card_alt"]), ("active", COLORS["surface"])],
               foreground=[("selected", COLORS["accent"]), ("active", COLORS["text"])])
 
     style.configure("TProgressbar", background=COLORS["accent"],
-                    troughcolor=COLORS["card_soft"], borderwidth=0, thickness=6)
+                    troughcolor=COLORS["card_soft"], borderwidth=0, thickness=px(6))
     return style

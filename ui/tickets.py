@@ -12,13 +12,14 @@ from models import (
 )
 from services.csv_service import CSVFormatError
 from ui.components import (
-    Card, DataTable, Page, SectionHeader, flat_button, ticket_row_tags,
+    Card, DataTable, Page, ScrollableFrame, SectionHeader, flat_button,
+    ticket_row_tags,
 )
 from ui.dialogs import (
     AssignDialog, CommentDialog, ConfirmDialog, ImportSummaryDialog,
     StatusDialog, TicketDetailsDialog, TicketDialog,
 )
-from ui.theme import COLORS, FONTS, SLA_COLORS
+from ui.theme import COLORS, FONTS, SLA_COLORS, px
 
 
 SORT_OPTIONS = {
@@ -37,23 +38,25 @@ class TicketsPage(Page):
         self._search_job: str | None = None
         self._last_tickets: list[Ticket] = []
 
-        outer = tk.Frame(self, bg=COLORS["bg"])
-        outer.pack(fill="both", expand=True, padx=26, pady=20)
+        self.scroller = ScrollableFrame(self)
+        self.scroller.pack(fill="both", expand=True)
+        outer = tk.Frame(self.scroller.content, bg=COLORS["bg"])
+        outer.pack(fill="both", expand=True, padx=px(26), pady=px(20))
 
         header = SectionHeader(
             outer, "Ticket queue",
             "Search, filter and manage every request from intake to resolution.",
         )
-        header.pack(fill="x", pady=(0, 14))
+        header.pack(fill="x", pady=(0, px(14)))
         flat_button(header.actions, "Import CSV", self.import_csv, "secondary").pack(
-            side="right", padx=(8, 0))
+            side="right", padx=(px(8), 0))
         flat_button(header.actions, "Export", self.export_filtered, "secondary").pack(
-            side="right", padx=(8, 0))
+            side="right", padx=(px(8), 0))
         flat_button(header.actions, "New ticket", self.open_create, "primary").pack(
             side="right")
 
         filters = Card(outer, padding=(14, 10), bg=COLORS["surface"])
-        filters.pack(fill="x", pady=(0, 12))
+        filters.pack(fill="x", pady=(0, px(12)))
         filter_grid = filters.body
         filter_grid.grid_columnconfigure(0, weight=3)
         filter_grid.grid_columnconfigure(1, weight=1)
@@ -65,13 +68,13 @@ class TicketsPage(Page):
         labels = ["SEARCH", "PRIORITY", "STATUS", "ASSIGNEE", "SORT"]
         for column, label in enumerate(labels):
             tk.Label(filter_grid, text=label, bg=COLORS["surface"], fg=COLORS["subtle"],
-                     font=FONTS["tiny"], anchor="w").grid(
-                row=0, column=column, sticky="ew", padx=(0, 8), pady=(0, 4))
+                     font=FONTS["micro"], anchor="w").grid(
+                row=0, column=column, sticky="ew", padx=(0, px(8)), pady=(0, px(5)))
 
         self.search_var = tk.StringVar()
         self.search_entry = ttk.Entry(filter_grid, textvariable=self.search_var,
                                       style="Search.TEntry")
-        self.search_entry.grid(row=1, column=0, sticky="ew", padx=(0, 8))
+        self.search_entry.grid(row=1, column=0, sticky="ew", padx=(0, px(8)))
         self.search_entry.bind("<KeyRelease>", self._schedule_search)
         self.search_entry.bind("<Return>", lambda _event: self.refresh())
 
@@ -80,7 +83,7 @@ class TicketsPage(Page):
             filter_grid, textvariable=self.priority_var,
             values=["All priorities"] + list(PRIORITIES), state="readonly",
         )
-        self.priority_combo.grid(row=1, column=1, sticky="ew", padx=(0, 8))
+        self.priority_combo.grid(row=1, column=1, sticky="ew", padx=(0, px(8)))
         self.priority_combo.bind("<<ComboboxSelected>>", lambda _event: self.refresh())
 
         self.status_var = tk.StringVar(value="All statuses")
@@ -88,14 +91,14 @@ class TicketsPage(Page):
             filter_grid, textvariable=self.status_var,
             values=["All statuses"] + list(STATUSES), state="readonly",
         )
-        self.status_combo.grid(row=1, column=2, sticky="ew", padx=(0, 8))
+        self.status_combo.grid(row=1, column=2, sticky="ew", padx=(0, px(8)))
         self.status_combo.bind("<<ComboboxSelected>>", lambda _event: self.refresh())
 
         self.assignee_var = tk.StringVar(value="All assignees")
         self.assignee_combo = ttk.Combobox(
             filter_grid, textvariable=self.assignee_var, state="readonly",
         )
-        self.assignee_combo.grid(row=1, column=3, sticky="ew", padx=(0, 8))
+        self.assignee_combo.grid(row=1, column=3, sticky="ew", padx=(0, px(8)))
         self.assignee_combo.bind("<<ComboboxSelected>>", lambda _event: self.refresh())
 
         self.sort_var = tk.StringVar(value="Newest first")
@@ -103,7 +106,7 @@ class TicketsPage(Page):
             filter_grid, textvariable=self.sort_var,
             values=list(SORT_OPTIONS.keys()), state="readonly",
         )
-        self.sort_combo.grid(row=1, column=4, sticky="ew", padx=(0, 8))
+        self.sort_combo.grid(row=1, column=4, sticky="ew", padx=(0, px(8)))
         self.sort_combo.bind("<<ComboboxSelected>>", lambda _event: self.refresh())
 
         flat_button(filter_grid, "Clear", self.clear_filters, "ghost").grid(
@@ -125,7 +128,7 @@ class TicketsPage(Page):
                 {"key": "deadline", "label": "RESOLUTION DUE", "width": 128},
                 {"key": "sla", "label": "SLA", "width": 78},
             ],
-            height=12,
+            height=16,
             on_double_click=self._open_details,
             on_select=lambda _payload: self._update_action_state(),
             empty_title="No tickets match this view",
@@ -143,7 +146,7 @@ class TicketsPage(Page):
         self._menu.add_command(label="Delete ticket", command=self.delete_selected)
 
         footer = tk.Frame(outer, bg=COLORS["bg"])
-        footer.pack(fill="x", pady=(10, 0))
+        footer.pack(fill="x", pady=(px(10), 0))
         self.count_var = tk.StringVar(value="0 tickets")
         tk.Label(footer, textvariable=self.count_var, bg=COLORS["bg"], fg=COLORS["muted"],
                  font=FONTS["small"]).pack(side="left")
@@ -158,7 +161,7 @@ class TicketsPage(Page):
             ("Open details", self.open_selected, "primary"),
         ):
             button = flat_button(footer, label, command, kind)
-            button.pack(side="right", padx=(8, 0))
+            button.pack(side="right", padx=(px(8), 0))
             self.action_buttons.append(button)
         self._update_action_state()
 

@@ -24,7 +24,7 @@ from ui.data import DataPage
 from ui.dialogs import TicketDetailsDialog
 from ui.escalations import EscalationsPage
 from ui.sla import SLAPage
-from ui.theme import COLORS, FONTS, apply_theme
+from ui.theme import COLORS, FONTS, apply_theme, px
 from ui.tickets import TicketsPage
 
 logger = logging.getLogger(__name__)
@@ -68,12 +68,14 @@ class OpsFlowApp:
         self.current_page_name: str = ""
         self.current_page: Any = None
         self._timers: list[str] = []
+        self._clock_job: str | None = None
+        self._scan_job: str | None = None
         self._last_scan: datetime | None = None
 
         root.title(f"{APP_NAME} · Operations & SLA Management")
         root.configure(bg=COLORS["bg"])
         apply_theme(root)
-        root.minsize(1200, 720)
+        self._set_minimum_size()
         self._set_geometry()
         root.protocol("WM_DELETE_WINDOW", self.close)
         root.report_callback_exception = self._report_exception
@@ -87,7 +89,7 @@ class OpsFlowApp:
         )
         self._tick_clock()
         self._schedule_scan()
-        self._timers.append(root.after(800, lambda: self.run_escalation_scan(silent=True)))
+        self._schedule(800, lambda: self.run_escalation_scan(silent=True))
 
     def _build_services(self, db: Database) -> dict[str, Any]:
         audit = AuditService(db)
@@ -107,21 +109,30 @@ class OpsFlowApp:
         }
 
     # ------------------------------------------------------------------- shell
+    def _set_minimum_size(self) -> None:
+        screen_w = self.root.winfo_screenwidth()
+        screen_h = self.root.winfo_screenheight()
+        min_w = min(px(1180), max(px(900), screen_w - px(40)))
+        min_h = min(px(720), max(px(600), screen_h - px(80)))
+        self.root.minsize(min_w, min_h)
+
     def _set_geometry(self) -> None:
         self.root.update_idletasks()
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
-        width = min(1460, max(1180, screen_w - 80))
-        height = min(920, max(720, screen_h - 90))
+        width = min(px(1460), max(px(1120), screen_w - px(80)))
+        height = min(px(920), max(px(720), screen_h - px(90)))
+        width = min(width, screen_w - px(40))
+        height = min(height, screen_h - px(40))
         x = max(0, (screen_w - width) // 2)
-        y = max(0, (screen_h - height) // 2 - 16)
+        y = max(0, (screen_h - height) // 2 - px(16))
         self.root.geometry(f"{width}x{height}+{x}+{y}")
 
     def _build_shell(self) -> None:
         self.shell = tk.Frame(self.root, bg=COLORS["bg"])
         self.shell.pack(fill="both", expand=True)
 
-        self.sidebar = tk.Frame(self.shell, bg=COLORS["sidebar"], width=236)
+        self.sidebar = tk.Frame(self.shell, bg=COLORS["sidebar"], width=px(236))
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
         self.main = tk.Frame(self.shell, bg=COLORS["bg"])
@@ -138,51 +149,55 @@ class OpsFlowApp:
 
     def _build_sidebar(self) -> None:
         brand = tk.Frame(self.sidebar, bg=COLORS["sidebar"])
-        brand.pack(fill="x", padx=18, pady=(22, 20))
-        logo = tk.Canvas(brand, width=38, height=38, bg=COLORS["sidebar"],
+        brand.pack(fill="x", padx=px(18), pady=(px(22), px(20)))
+        logo = tk.Canvas(brand, width=px(38), height=px(38), bg=COLORS["sidebar"],
                          highlightthickness=0)
         logo.pack(side="left")
-        logo.create_polygon(4, 19, 19, 4, 34, 19, 19, 34, fill=COLORS["accent"], outline="")
-        logo.create_polygon(12, 19, 19, 12, 26, 19, 19, 26, fill=COLORS["sidebar"], outline="")
+        logo.create_polygon(px(4), px(19), px(19), px(4), px(34), px(19), px(19), px(34),
+                            fill=COLORS["accent"], outline="")
+        logo.create_polygon(px(12), px(19), px(19), px(12), px(26), px(19), px(19), px(26),
+                            fill=COLORS["sidebar"], outline="")
         brand_text = tk.Frame(brand, bg=COLORS["sidebar"])
-        brand_text.pack(side="left", padx=(10, 0))
+        brand_text.pack(side="left", padx=(px(11), 0))
         tk.Label(brand_text, text="OPSFLOW", bg=COLORS["sidebar"], fg=COLORS["text"],
                  font=(FONTS["h2"].actual("family"), 15, "bold")).pack(anchor="w")
         tk.Label(brand_text, text="OPERATIONS CONTROL", bg=COLORS["sidebar"],
-                 fg=COLORS["accent"], font=(FONTS["tiny"].actual("family"), 7, "bold")).pack(
-            anchor="w", pady=(1, 0))
+                 fg=COLORS["accent"], font=FONTS["micro"]).pack(
+            anchor="w", pady=(px(1), 0))
 
-        tk.Frame(self.sidebar, bg=COLORS["border_soft"], height=1).pack(
-            fill="x", padx=18, pady=(0, 16))
+        tk.Frame(self.sidebar, bg=COLORS["border_soft"], height=px(1)).pack(
+            fill="x", padx=px(18), pady=(0, px(16)))
         tk.Label(self.sidebar, text="WORKSPACE", bg=COLORS["sidebar"], fg=COLORS["subtle"],
-                 font=(FONTS["tiny"].actual("family"), 7, "bold")).pack(
-            anchor="w", padx=22, pady=(0, 6))
+                 font=FONTS["micro"]).pack(
+            anchor="w", padx=px(22), pady=(0, px(7)))
         nav_container = tk.Frame(self.sidebar, bg=COLORS["sidebar"])
-        nav_container.pack(fill="x", padx=10)
+        nav_container.pack(fill="x", padx=px(10))
         for key, label, icon in NAV_ITEMS:
             item = SidebarItem(nav_container, key, label, icon, self.show_page)
-            item.pack(fill="x", pady=1)
+            item.pack(fill="x", pady=px(1))
             self.nav_items[key] = item
 
         spacer = tk.Frame(self.sidebar, bg=COLORS["sidebar"])
-        spacer.pack(fill="both", expand=True, pady=(20, 0))
+        spacer.pack(fill="both", expand=True, pady=(px(20), 0))
 
         footer = tk.Frame(self.sidebar, bg=COLORS["sidebar"])
-        footer.pack(fill="x", padx=18, pady=(0, 18))
-        tk.Frame(footer, bg=COLORS["border_soft"], height=1).pack(fill="x", pady=(0, 14))
+        footer.pack(fill="x", padx=px(18), pady=(0, px(18)))
+        tk.Frame(footer, bg=COLORS["border_soft"], height=px(1)).pack(
+            fill="x", pady=(0, px(14)))
         tk.Label(footer, text="SYSTEM", bg=COLORS["sidebar"], fg=COLORS["subtle"],
-                 font=(FONTS["tiny"].actual("family"), 7, "bold")).pack(anchor="w")
+                 font=FONTS["micro"]).pack(anchor="w")
         state_row = tk.Frame(footer, bg=COLORS["sidebar"])
-        state_row.pack(fill="x", pady=(6, 2))
+        state_row.pack(fill="x", pady=(px(7), px(2)))
         tk.Label(state_row, text="●", bg=COLORS["sidebar"], fg=COLORS["green"],
                  font=FONTS["tiny"]).pack(side="left")
         tk.Label(state_row, text="Local SQLite · offline ready", bg=COLORS["sidebar"],
-                 fg=COLORS["muted"], font=FONTS["tiny"]).pack(side="left", padx=(6, 0))
+                 fg=COLORS["muted"], font=FONTS["micro"]).pack(side="left", padx=(px(7), 0))
         self.sidebar_counts_var = tk.StringVar(value="—")
         tk.Label(footer, textvariable=self.sidebar_counts_var, bg=COLORS["sidebar"],
-                 fg=COLORS["subtle"], font=FONTS["tiny"], anchor="w").pack(
-            fill="x", pady=(0, 10))
-        tk.Frame(footer, bg=COLORS["border_soft"], height=1).pack(fill="x", pady=(0, 12))
+                 fg=COLORS["subtle"], font=FONTS["micro"], anchor="w", justify="left").pack(
+            fill="x", pady=(0, px(11)))
+        tk.Frame(footer, bg=COLORS["border_soft"], height=px(1)).pack(
+            fill="x", pady=(0, px(13)))
         operator_row = tk.Frame(footer, bg=COLORS["sidebar"])
         operator_row.pack(fill="x")
         avatar = tk.Label(operator_row, text=(self.actor[:1] or "O").upper(),
@@ -190,18 +205,19 @@ class OpsFlowApp:
                           font=FONTS["medium"])
         avatar.pack(side="left")
         operator_text = tk.Frame(operator_row, bg=COLORS["sidebar"])
-        operator_text.pack(side="left", padx=(8, 0))
+        operator_text.pack(side="left", padx=(px(9), 0))
         tk.Label(operator_text, text=self.actor, bg=COLORS["sidebar"], fg=COLORS["text_soft"],
                  font=FONTS["small"], anchor="w").pack(fill="x")
         tk.Label(operator_text, text=f"OpsFlow v{APP_VERSION}", bg=COLORS["sidebar"],
-                 fg=COLORS["subtle"], font=FONTS["tiny"], anchor="w").pack(fill="x")
+                 fg=COLORS["subtle"], font=FONTS["micro"], anchor="w").pack(fill="x")
 
     def _build_topbar(self) -> None:
-        topbar = tk.Frame(self.main, bg=COLORS["bg"], height=84)
+        topbar = tk.Frame(self.main, bg=COLORS["bg"], height=px(84))
         topbar.pack(side="top", fill="x")
         topbar.pack_propagate(False)
+        tk.Frame(topbar, bg=COLORS["border_soft"], height=px(1)).pack(side="bottom", fill="x")
         inner = tk.Frame(topbar, bg=COLORS["bg"])
-        inner.pack(fill="both", expand=True, padx=26, pady=(15, 10))
+        inner.pack(fill="both", expand=True, padx=px(26), pady=(px(15), px(10)))
         title_box = tk.Frame(inner, bg=COLORS["bg"])
         title_box.pack(side="left", fill="y")
         self.page_title_var = tk.StringVar(value="Operations overview")
@@ -210,35 +226,35 @@ class OpsFlowApp:
                  fg=COLORS["text"], font=FONTS["h1"], anchor="w").pack(anchor="w")
         tk.Label(title_box, textvariable=self.page_subtitle_var, bg=COLORS["bg"],
                  fg=COLORS["muted"], font=FONTS["small"], anchor="w").pack(
-            anchor="w", pady=(1, 0))
+            anchor="w", pady=(px(1), 0))
 
         actions = tk.Frame(inner, bg=COLORS["bg"])
         actions.pack(side="right", fill="y")
         self.clock_var = tk.StringVar(value="")
         tk.Label(actions, textvariable=self.clock_var, bg=COLORS["bg"],
-                 fg=COLORS["muted"], font=FONTS["mono"]).pack(side="left", padx=(0, 16))
+                 fg=COLORS["muted"], font=FONTS["mono"]).pack(side="left", padx=(0, px(16)))
         flat_button(actions, "↻ Refresh", self.refresh_current, "ghost").pack(
-            side="left", padx=(0, 6))
+            side="left", padx=(0, px(6)))
         flat_button(actions, "Run SLA scan", self.run_scan_from_topbar, "primary").pack(
             side="left")
 
     def _build_statusbar(self) -> None:
-        statusbar = tk.Frame(self.main, bg=COLORS["sidebar"], height=30)
+        statusbar = tk.Frame(self.main, bg=COLORS["sidebar"], height=px(30))
         statusbar.pack(side="bottom", fill="x")
         statusbar.pack_propagate(False)
         inner = tk.Frame(statusbar, bg=COLORS["sidebar"])
-        inner.pack(fill="both", expand=True, padx=18)
+        inner.pack(fill="both", expand=True, padx=px(18))
         self.status_dot = tk.Label(inner, text="●", bg=COLORS["sidebar"],
                                    fg=COLORS["accent"], font=FONTS["tiny"])
         self.status_dot.pack(side="left")
         self.status_var = tk.StringVar(value="Ready")
         tk.Label(inner, textvariable=self.status_var, bg=COLORS["sidebar"],
-                 fg=COLORS["muted"], font=FONTS["tiny"]).pack(side="left", padx=(7, 0))
+                 fg=COLORS["muted"], font=FONTS["tiny"]).pack(side="left", padx=(px(7), 0))
         self.last_scan_var = tk.StringVar(value="SLA scan pending")
         tk.Label(inner, textvariable=self.last_scan_var, bg=COLORS["sidebar"],
                  fg=COLORS["subtle"], font=FONTS["tiny"]).pack(side="right")
         tk.Label(inner, text=f"{self.db.path.name} · local only", bg=COLORS["sidebar"],
-                 fg=COLORS["subtle"], font=FONTS["tiny"]).pack(side="right", padx=(0, 16))
+                 fg=COLORS["subtle"], font=FONTS["tiny"]).pack(side="right", padx=(0, px(16)))
 
     # --------------------------------------------------------------- lifecycle
     def _ensure_page(self, name: str) -> Any:
@@ -278,13 +294,13 @@ class OpsFlowApp:
         self.show_page("tickets")
         page = self.pages.get("tickets")
         if page:
-            self.root.after(80, page.open_create)
+            self._schedule(80, page.open_create)
 
     def _shortcut_search(self) -> None:
         self.show_page("tickets")
         page = self.pages.get("tickets")
         if page:
-            self.root.after(80, page.focus_search)
+            self._schedule(80, page.focus_search)
 
     def _bind_shortcuts(self) -> None:
         self.root.bind_all("<Control-n>", lambda _event: self._shortcut_new_ticket())
@@ -354,7 +370,7 @@ class OpsFlowApp:
         self.run_escalation_scan(silent=False)
 
     def _schedule_scan(self) -> None:
-        self._timers.append(self.root.after(60000, self._scheduled_scan))
+        self._scan_job = self.root.after(60000, self._scheduled_scan)
 
     def _scheduled_scan(self) -> None:
         self.run_escalation_scan(silent=True)
@@ -363,7 +379,20 @@ class OpsFlowApp:
     def _tick_clock(self) -> None:
         now = datetime.now()
         self.clock_var.set(now.strftime("%a %d %b  ·  %H:%M:%S"))
-        self._timers.append(self.root.after(1000, self._tick_clock))
+        self._clock_job = self.root.after(1000, self._tick_clock)
+
+    def _schedule(self, ms: int, callback: Callable[[], None]) -> None:
+        """Run a one-shot callback, tracking it only while it is pending."""
+        holder: list[str] = []
+
+        def _run() -> None:
+            if holder and holder[0] in self._timers:
+                self._timers.remove(holder[0])
+            callback()
+
+        job = self.root.after(ms, _run)
+        holder.append(job)
+        self._timers.append(job)
 
     # ------------------------------------------------------------------ status
     def set_status(self, message: str, level: str = "info") -> None:
@@ -404,7 +433,16 @@ class OpsFlowApp:
             pass
 
     def close(self) -> None:
-        for timer in self._timers:
+        for job in (self._clock_job, self._scan_job):
+            if not job:
+                continue
+            try:
+                self.root.after_cancel(job)
+            except tk.TclError:
+                pass
+        self._clock_job = None
+        self._scan_job = None
+        for timer in list(self._timers):
             try:
                 self.root.after_cancel(timer)
             except tk.TclError:
