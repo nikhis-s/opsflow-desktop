@@ -3,17 +3,25 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime
-from typing import Any, Iterable
+from typing import Any
 
-from config import DEFAULT_ACTOR
 from database import Database
 from models import (
-    ACTIVE_STATUSES, EscalationEvent, Priority, Ticket, format_local,
-    human_duration, to_iso, utc_now,
+    ACTIVE_STATUSES,
+    EscalationEvent,
+    Priority,
+    Ticket,
+    format_local,
+    human_duration,
+    to_iso,
+    utc_now,
 )
 from services.audit_service import AuditService
 from services.sla_engine import (
-    AT_RISK, BREACHED, SLAEngine, SLAEvaluation,
+    AT_RISK,
+    BREACHED,
+    SLAEngine,
+    SLAEvaluation,
 )
 
 
@@ -143,7 +151,7 @@ class EscalationEngine:
         )
         if cursor.rowcount == 0:
             return []
-        event_id = int(cursor.lastrowid)
+        event_id = int(cursor.lastrowid or 0)
         self.audit.record(
             conn, ticket.id, "ESCALATION_RAISED",
             f"[{level}] {reason} {details}",

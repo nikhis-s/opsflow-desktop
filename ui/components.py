@@ -2,12 +2,19 @@
 from __future__ import annotations
 
 import tkinter as tk
+from collections.abc import Callable, Sequence
 from tkinter import ttk
-from typing import Any, Callable, Sequence
+from typing import Any, ClassVar, Literal
 
 from ui.theme import (
-    COLORS, FONTS, PRIORITY_COLORS, SLA_COLORS, STATUS_COLORS, mix, px,
+    COLORS,
+    FONTS,
+    mix,
+    px,
 )
+
+#: Widgets that can scroll their own contents.
+Scrollable = ttk.Treeview | tk.Text | tk.Listbox
 
 
 def flat_button(parent: tk.Misc, text: str, command: Callable[[], None],
@@ -22,19 +29,26 @@ def flat_button(parent: tk.Misc, text: str, command: Callable[[], None],
     return ttk.Button(parent, text=text, command=command, style=style, cursor="hand2", **kwargs)
 
 
-class Page(tk.Frame):
-    """Base page with a consistent background and lifecycle hook."""
+class ManagedTimers(tk.Misc):
+    """Mixin that tracks ``after`` callbacks and cancels them on destroy.
 
-    def __init__(self, parent: tk.Misc, app: Any):
-        super().__init__(parent, bg=COLORS["bg"])
-        self.app = app
-        self._jobs: list[str] = []
-        self.bind("<Destroy>", self._on_destroy, add="+")
+    Tk does not cancel pending ``after`` scripts when a widget is destroyed.
+    A callback scheduled just before teardown therefore fires against a dead
+    widget and raises ``invalid command name`` in the console, which can also
+    leave the Tcl interpreter in a bad state for the next window.
 
-    def after(self, ms: int, func: Any = None, *args: Any) -> str:
+    This is used as a mixin ahead of ``tk.Frame`` / ``tk.Toplevel``; it must
+    never be instantiated on its own.
+    """
+
+    _jobs: list[str]
+
+    def _init_managed_timers(self) -> None:
+        self._jobs = []
+        self.bind("<Destroy>", self._on_managed_destroy, add="+")
+
+    def schedule(self, ms: int, func: Callable[..., Any], *args: Any) -> str:
         """Schedule a callback and remember it so it can be cancelled."""
-        if func is None or not callable(func):
-            return super().after(ms, func, *args)
         holder: list[str] = []
 
         def _run() -> None:
@@ -47,7 +61,8 @@ class Page(tk.Frame):
         self._jobs.append(job)
         return job
 
-    def after_cancel(self, job: str) -> None:
+    def cancel_scheduled(self, job: str) -> None:
+        """Cancel a callback previously registered with :meth:`schedule`."""
         try:
             super().after_cancel(job)
         except tk.TclError:
@@ -55,7 +70,7 @@ class Page(tk.Frame):
         if job in self._jobs:
             self._jobs.remove(job)
 
-    def _on_destroy(self, event: tk.Event) -> None:
+    def _on_managed_destroy(self, event: tk.Event) -> None:
         """Cancel pending timers so nothing fires against a dead widget."""
         if event.widget is not self:
             return
@@ -65,6 +80,15 @@ class Page(tk.Frame):
             except tk.TclError:
                 pass
         self._jobs.clear()
+
+
+class Page(ManagedTimers, tk.Frame):
+    """Base page with a consistent background and lifecycle hook."""
+
+    def __init__(self, parent: tk.Misc, app: Any):
+        super().__init__(parent, bg=COLORS["bg"])
+        self.app = app
+        self._init_managed_timers()
 
     def on_show(self) -> None:  # pragma: no cover - overridden by pages
         pass
@@ -141,7 +165,7 @@ class SectionHeader(tk.Frame):
 
 
 class Badge(tk.Label):
-    _TONES = {
+    _TONES: ClassVar[dict[str, tuple[str, str]]] = {
         "neutral": (COLORS["muted"], COLORS["card_alt"]),
         "accent": (COLORS["accent"], mix(COLORS["card"], COLORS["accent"], 0.14)),
         "info": (COLORS["blue"], mix(COLORS["card"], COLORS["blue"], 0.15)),
@@ -205,11 +229,11 @@ class DataTable(tk.Frame):
         parent: tk.Misc,
         columns: Sequence[dict[str, Any]],
         height: int = 10,
-        on_double_click: Callable[[str], None] | None = None,
-        on_select: Callable[[str], None] | None = None,
+        on_double_click: Callable[[Any], None] | None = None,
+        on_select: Callable[[Any], None] | None = None,
         empty_title: str = "Nothing here yet",
         empty_hint: str = "",
-        selectmode: str = "browse",
+        selectmode: Literal["extended", "browse", "none"] = "browse",
     ):
         super().__init__(parent, bg=COLORS["card_soft"], bd=0,
                          highlightthickness=1, highlightbackground=COLORS["border_soft"])
@@ -225,7 +249,7 @@ class DataTable(tk.Frame):
 
         self.tree = ttk.Treeview(self, columns=keys, show="headings",
                                  height=height, selectmode=selectmode)
-        for column, width in zip(self.columns_spec, self._base_widths):
+        for column, width in zip(self.columns_spec, self._base_widths, strict=True):
             self.tree.heading(column["key"], text=column["label"],
                               anchor=column.get("heading_anchor", column.get("anchor", "w")))
             self.tree.column(
@@ -331,7 +355,7 @@ class DataTable(tk.Frame):
                         widths[index] -= 1
                         deficit -= 1
                     cursor += 1
-        for column, width in zip(self.columns_spec, widths):
+        for column, width in zip(self.columns_spec, widths, strict=True):
             self.tree.column(column["key"], width=width)
         if sum(widths) > available:
             self.hscroll.grid(row=1, column=0, sticky="ew", padx=(1, 0))
@@ -350,7 +374,7 @@ class DataTable(tk.Frame):
         self._payloads.clear()
         for index, row in enumerate(rows):
             values = values_transform(row) if values_transform else row
-            item = self.tree.insert("", "end", values=values)
+            item = self.tree.insert("", "end", values=list(values))
             if payloads is not None:
                 self._payloads[item] = payloads[index]
             row_tags = list(tags[index]) if tags is not None else []
@@ -388,9 +412,8 @@ class DataTable(tk.Frame):
         return False
 
     def _double_click(self, _event: tk.Event) -> None:
-        item = self.tree.identify_row(_event.y)
-        if not item:
-            item = self.selected_item()
+        row = self.tree.identify_row(_event.y)
+        item = row or self.selected_item()
         if item and self._on_double_click:
             payload = self._payloads.get(item)
             if payload is None:
@@ -443,7 +466,7 @@ class ScrollableFrame(tk.Frame):
 
 
 def _scroller_under(widget: tk.Misc | None,
-                    skip_scrollable: bool = False) -> "ScrollableFrame | None":
+                    skip_scrollable: bool = False) -> ScrollableFrame | None:
     """Return the scrollable ancestor of a widget, ignoring inner scrollers.
 
     Scrollable widgets (tables, text boxes, lists) normally absorb the mouse
@@ -460,7 +483,7 @@ def _scroller_under(widget: tk.Misc | None,
     return None
 
 
-def _can_scroll(widget: tk.Misc, units: int) -> bool:
+def _can_scroll(widget: Scrollable, units: int) -> bool:
     """True when the widget still has content in the requested direction."""
     try:
         first, last = widget.yview()
@@ -473,7 +496,7 @@ def _can_scroll(widget: tk.Misc, units: int) -> bool:
     return last < 0.999
 
 
-def bind_scroll_handoff(widget: tk.Misc) -> None:
+def bind_scroll_handoff(widget: Scrollable) -> None:
     """Route the mouse wheel from a scrollable widget to its page scroller.
 
     The widget scrolls itself while it still has content; once it reaches its

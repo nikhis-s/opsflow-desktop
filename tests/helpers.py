@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from database import Database
@@ -14,7 +14,7 @@ from services.escalation_engine import EscalationEngine
 from services.sla_engine import SLAEngine
 from services.ticket_service import TicketService
 
-NOW = datetime(2026, 5, 1, 12, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 5, 1, 12, 0, tzinfo=UTC)
 ACTOR = "test.operator"
 
 

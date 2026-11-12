@@ -1,0 +1,5 @@
+# Development and CI dependencies.
+# The application itself needs none of these - it is standard library only.
+pytest>=8.0
+ruff>=0.5
+mypy>=1.10

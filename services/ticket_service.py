@@ -3,14 +3,25 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Any, Iterable
+from typing import Any
 
 from config import DEFAULT_ACTOR
 from database import Database
 from models import (
-    ACTIVE_STATUSES, CATEGORIES, PRIORITIES, STATUSES, TICKET_ID_RE, Priority, Status,
-    Ticket, TicketComment, ensure_aware, is_active_status, parse_timestamp,
-    to_iso, truncate, utc_now,
+    ACTIVE_STATUSES,
+    CATEGORIES,
+    PRIORITIES,
+    STATUSES,
+    TICKET_ID_RE,
+    Priority,
+    Status,
+    Ticket,
+    TicketComment,
+    ensure_aware,
+    parse_timestamp,
+    to_iso,
+    truncate,
+    utc_now,
 )
 from services.audit_service import AuditService
 from services.sla_engine import SLAEngine
@@ -335,7 +346,7 @@ class TicketService:
         assignments["updated_at"] = to_iso(now)
 
         set_clause = ", ".join(f"{field} = ?" for field in assignments)
-        params = list(assignments.values()) + [ticket_id]
+        params = [*assignments.values(), ticket_id]
         with self.db.transaction() as conn:
             conn.execute(f"UPDATE tickets SET {set_clause} WHERE id = ?", params)
             # Field-level audit records.
@@ -411,7 +422,7 @@ class TicketService:
         internal: bool = True,
     ) -> TicketComment:
         body = self._required(body, "Comment", 10000)
-        ticket = self.get_ticket(ticket_id)
+        self.get_ticket(ticket_id)  # validates the ticket exists before writing
         now = utc_now()
         with self.db.transaction() as conn:
             cursor = conn.execute(
@@ -428,7 +439,7 @@ class TicketService:
                 f"Internal note by {author or DEFAULT_ACTOR}: {truncate(body, 160)}",
                 author or DEFAULT_ACTOR, now,
             )
-            comment_id = int(cursor.lastrowid)
+            comment_id = int(cursor.lastrowid or 0)
         with self.db.read() as conn:
             row = conn.execute(
                 "SELECT * FROM ticket_comments WHERE id = ?", (comment_id,)

@@ -4,10 +4,11 @@ from __future__ import annotations
 import os
 import subprocess
 import tkinter as tk
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from typing import Any, Callable
+from typing import Any
 
 from services.csv_service import CSVFormatError
 from ui.components import Card, Page, ScrollableFrame, SectionHeader, flat_button
@@ -90,7 +91,7 @@ class DataPage(Page):
              COLORS["green"], self.export_sla),
             ("escalations", "Escalation history", "Every recorded warning and critical event.",
              COLORS["amber"], self.export_escalations),
-            ("audit", "Audit trail", "Complete immutable operation log for compliance review.",
+            ("audit", "Audit trail", "Complete append-only operation log for compliance review.",
              COLORS["blue"], self.export_audit),
         ]
         for index, (key, title, description, accent, command) in enumerate(export_specs):
@@ -278,7 +279,7 @@ class DataPage(Page):
         path = self.app.services["db"].path.parent
         try:
             if os.name == "nt":
-                os.startfile(str(path))  # type: ignore[attr-defined]
+                os.startfile(str(path))
             elif os.uname().sysname == "Darwin":  # type: ignore[attr-defined]
                 subprocess.Popen(["open", str(path)])
             else:

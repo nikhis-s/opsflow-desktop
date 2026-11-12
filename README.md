@@ -1,8 +1,10 @@
 # OpsFlow
 
+[![CI](https://github.com/nikhis-s/opsflow-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/nikhis-s/opsflow-desktop/actions/workflows/ci.yml)
+
 OpsFlow is a fully offline, Python-only desktop application for operations ticket
 management. It combines a ticket queue, deterministic SLA tracking, escalation
-history, an immutable audit trail, analytics, and validated CSV import/export in a
+history, an append-only audit trail, analytics, and validated CSV import/export in a
 single dark-themed Tkinter application.
 
 There is no web stack, no JavaScript, no cloud dependency, no AI/LLM integration,
@@ -95,9 +97,13 @@ opsflow/
 ├── config.py                  # app metadata and data-directory resolution
 ├── database.py                # SQLite schema, transactions, backup and migration
 ├── models.py                  # enums, dataclasses, time and formatting helpers
+├── pyproject.toml             # project metadata, ruff and mypy configuration
 ├── requirements.txt           # no third-party runtime dependencies
+├── requirements-dev.txt       # pytest, ruff, mypy (development only)
 ├── README.md
+├── LICENSE
 ├── .gitignore
+├── .github/workflows/ci.yml   # lint, type check, tests and launch smoke test
 ├── services/
 │   ├── audit_service.py       # append-only audit history
 │   ├── sla_engine.py          # policies, deadline evaluation, compliance
@@ -105,6 +111,8 @@ opsflow/
 │   ├── escalation_engine.py   # scan, deduplicate and record escalations
 │   ├── analytics.py           # dashboard metrics and SLA reports
 │   └── csv_service.py         # validated import and report export
+├── tools/
+│   └── smoke_launch.py        # launch the GUI, render every page, close it
 ├── ui/
 │   ├── app.py                 # shell, sidebar, shortcuts, scheduled scans
 │   ├── theme.py               # dark navy/cyan theme, ttk styles, DPI scaling
@@ -116,7 +124,7 @@ opsflow/
 │   ├── audit.py
 │   ├── data.py
 │   └── dialogs.py             # create/edit/assign/status/note/detail dialogs
-├── tests/                     # unittest suite (84 tests)
+├── tests/                     # unittest suite (93 tests)
 └── sample_data/
     ├── operations_import.csv  # valid import example
     ├── import_template.csv    # header and one example row
@@ -135,6 +143,26 @@ Use `sample_data/operations_import.csv` for a valid demonstration and
 `sample_data/invalid_import.csv` to see the validation report. The app can also
 write a fresh template from the Data exchange page.
 
+## Development
+
+The application itself has no third-party runtime dependencies. Development and
+CI tooling is installed separately:
+
+```powershell
+python -m pip install -r requirements-dev.txt
+```
+
+| Command | What it checks |
+| --- | --- |
+| `python -m pytest -q` | the full test suite |
+| `python -m unittest discover -q` | the same suite through the stdlib runner |
+| `ruff check .` | lint (configured in `pyproject.toml`) |
+| `mypy` | static type checking (configured in `pyproject.toml`) |
+| `python main.py --check` | database initialization and health diagnostics |
+| `python tools/smoke_launch.py` | launches the real window, renders every page, closes it |
+
+`ruff` and `mypy` are both clean on the current tree.
+
 ## Tests
 
 Run the full suite from the project root:
@@ -145,10 +173,23 @@ python -m unittest discover -v
 
 The suite covers models, database initialization/migration/backup, ticket
 lifecycle, SLA evaluation and compliance, escalation deduplication, audit history,
-analytics, CSV import/export validation, and a Tkinter UI smoke test that builds
-the real shell, opens every page, exercises an SLA scan and checks mouse-wheel
-routing. It runs in about 11 seconds and needs no display server beyond a normal
-desktop session.
+analytics, CSV import/export validation, and the Tkinter UI layer. The UI tests
+build the real application shell, open every page, exercise an SLA scan, check
+mouse-wheel routing and construct every modal dialog to confirm it opens, lays
+itself out within the screen bounds and closes cleanly.
+
+The suite needs no display server beyond a normal desktop session. On a headless
+Linux box it runs under `xvfb-run`.
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on every push and pull request:
+
+- **quality** — `ruff check` and `mypy` on the full tree.
+- **test** — `pytest` and `unittest` across Python 3.11 and 3.12 on Ubuntu,
+  Windows and macOS, plus the `main.py --check` diagnostics.
+- **launch** — `tools/smoke_launch.py` starts the real desktop application on
+  each platform and verifies the window, every page and a clean shutdown.
 
 ## Known limitations
 
@@ -156,8 +197,8 @@ desktop session.
   machines and intentionally sends no email, chat, or webhook notifications.
 - CSV import is transactional per successful row, not as one all-or-nothing batch;
   valid rows are kept while invalid rows are reported.
-- The audit trail is append-only from the UI, but a user with direct filesystem
-  access to the SQLite file could modify it.
+- The audit trail is append-only through the application layer, but a user with
+  direct filesystem access to the SQLite file could modify it.
 - Timestamps are stored in UTC and rendered in the machine's local timezone; the
   UI does not offer per-user timezone selection.
 - Charts are lightweight Canvas renderings intended for operational summaries, not

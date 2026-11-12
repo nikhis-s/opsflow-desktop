@@ -6,10 +6,16 @@ from typing import Any
 
 from models import format_local, format_local_short, human_duration, truncate, utc_now
 from ui.components import (
-    Badge, Card, DataTable, KpiCard, Page, ScrollableFrame, SectionHeader,
-    flat_button, ticket_row_tags,
+    Card,
+    DataTable,
+    KpiCard,
+    Page,
+    ScrollableFrame,
+    SectionHeader,
+    flat_button,
+    ticket_row_tags,
 )
-from ui.theme import COLORS, FONTS, PRIORITY_COLORS, SLA_COLORS, STATUS_COLORS, mix, px
+from ui.theme import COLORS, FONTS, PRIORITY_COLORS, STATUS_COLORS, px
 
 
 class DonutChart(tk.Canvas):

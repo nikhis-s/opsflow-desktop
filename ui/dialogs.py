@@ -2,22 +2,36 @@
 from __future__ import annotations
 
 import tkinter as tk
+from collections.abc import Callable
 from tkinter import ttk
-from typing import Any, Callable
+from typing import Any
 
-from config import DEFAULT_ACTOR
 from models import (
-    CATEGORIES, PRIORITIES, STATUSES, ImportResult, Ticket, format_local,
-    human_duration, duration_minutes, truncate,
+    PRIORITIES,
+    STATUSES,
+    ImportResult,
+    Ticket,
+    duration_minutes,
+    format_local,
+    human_duration,
+    truncate,
 )
 from services.audit_service import AuditService
 from services.escalation_engine import EscalationEngine
 from services.sla_engine import (
-    AT_RISK, BREACHED, MET, ON_TRACK, SLAEngine,
+    MET,
+    SLAEngine,
 )
 from services.ticket_service import TicketService, ValidationError
-from ui.components import Badge, Card, DataTable, Meter, bind_scroll_handoff, flat_button
-from ui.theme import COLORS, FONTS, SLA_COLORS, mix, px
+from ui.components import (
+    Badge,
+    DataTable,
+    ManagedTimers,
+    Meter,
+    bind_scroll_handoff,
+    flat_button,
+)
+from ui.theme import COLORS, FONTS, SLA_COLORS, px
 
 
 def _text_widget(parent: tk.Misc, height: int = 5, bg: str | None = None, **kwargs) -> tk.Text:
@@ -43,7 +57,7 @@ def _field_label(parent: tk.Misc, text: str, required: bool = False) -> tk.Frame
     return frame
 
 
-class BaseDialog(tk.Toplevel):
+class BaseDialog(ManagedTimers, tk.Toplevel):
     def __init__(
         self,
         parent: tk.Misc,
@@ -54,6 +68,7 @@ class BaseDialog(tk.Toplevel):
         resizable: bool = False,
     ):
         super().__init__(parent)
+        self._init_managed_timers()
         self.parent_window = parent.winfo_toplevel()
         screen_w = self.winfo_screenwidth()
         screen_h = self.winfo_screenheight()
@@ -105,7 +120,7 @@ class BaseDialog(tk.Toplevel):
         self.buttons = tk.Frame(self.footer, bg=COLORS["card"])
         self.buttons.pack(fill="x")
         self._center()
-        self.after(80, self._safe_focus)
+        self.schedule(80, self._safe_focus)
 
     def set_min_size(self, width: int, height: int) -> None:
         """Apply a scaled minimum size without allowing it to exceed the screen."""
@@ -120,12 +135,12 @@ class BaseDialog(tk.Toplevel):
     def _center(self) -> None:
         self.update_idletasks()
         parent = self.parent_window
-        px = parent.winfo_rootx()
-        py = parent.winfo_rooty()
-        pw = parent.winfo_width()
-        ph = parent.winfo_height()
-        x = max(0, px + (pw - self._width) // 2)
-        y = max(0, py + (ph - self._height) // 2 - 10)
+        parent_x = parent.winfo_rootx()
+        parent_y = parent.winfo_rooty()
+        parent_w = parent.winfo_width()
+        parent_h = parent.winfo_height()
+        x = max(0, parent_x + (parent_w - self._width) // 2)
+        y = max(0, parent_y + (parent_h - self._height) // 2 - px(10))
         screen_w = self.winfo_screenwidth()
         screen_h = self.winfo_screenheight()
         x = min(x, max(0, screen_w - self._width - px(20)))
@@ -198,7 +213,7 @@ class TicketDialog(BaseDialog):
             row=3, column=0, sticky="ew", padx=(0, px(8)), pady=(0, px(12)))
         self.assignee_combo = ttk.Combobox(
             self.body, textvariable=self.assignee_var,
-            values=["Unassigned"] + self.tickets.get_assignees(), state="normal",
+            values=["Unassigned", *self.tickets.get_assignees()], state="normal",
         )
         self.assignee_combo.grid(row=3, column=1, sticky="ew", padx=(px(8), 0),
                                  pady=(0, px(12)))
@@ -368,7 +383,7 @@ class AssignDialog(BaseDialog):
         self.assignee_var = tk.StringVar(value=ticket.assignee)
         self.combo = ttk.Combobox(
             self.body, textvariable=self.assignee_var,
-            values=["Unassigned"] + tickets.get_assignees(), state="normal",
+            values=["Unassigned", *tickets.get_assignees()], state="normal",
         )
         self.combo.pack(fill="x", pady=(0, px(8)))
         tk.Label(
@@ -379,7 +394,7 @@ class AssignDialog(BaseDialog):
         flat_button(self.buttons, "Cancel", self.close, "ghost").pack(side="right")
         flat_button(self.buttons, "Assign ticket", self.save, "primary").pack(
             side="right", padx=(0, px(8)))
-        self.after(100, self.combo.focus_set)
+        self.schedule(100, self.combo.focus_set)
 
     def save(self) -> None:
         self.clear_error()
@@ -425,7 +440,7 @@ class StatusDialog(BaseDialog):
         flat_button(self.buttons, "Cancel", self.close, "ghost").pack(side="right")
         flat_button(self.buttons, "Update status", self.save, "primary").pack(
             side="right", padx=(0, px(8)))
-        self.after(100, self.combo.focus_set)
+        self.schedule(100, self.combo.focus_set)
 
     def save(self) -> None:
         self.clear_error()
@@ -471,7 +486,7 @@ class CommentDialog(BaseDialog):
         flat_button(self.buttons, "Cancel", self.close, "ghost").pack(side="right")
         flat_button(self.buttons, "Add note", self.save, "primary").pack(
             side="right", padx=(0, px(8)))
-        self.after(120, self.note.focus_set)
+        self.schedule(120, self.note.focus_set)
 
     def save(self) -> None:
         self.clear_error()
@@ -782,7 +797,7 @@ class TicketDetailsDialog(BaseDialog):
             else:
                 detail = f"{state} · {human_duration(abs(remaining or 0))} late"
         else:
-            detail = (f"{human_duration(abs(remaining))} remaining" if (remaining or 0) >= 0
+            detail = (f"{human_duration(abs(remaining or 0))} remaining" if (remaining or 0) >= 0
                       else f"{human_duration(abs(remaining or 0))} overdue")
         tk.Label(inner, text=format_local(deadline), bg=COLORS["card_soft"],
                  fg=COLORS["text_soft"], font=FONTS["small"]).pack(
@@ -811,11 +826,15 @@ class TicketDetailsDialog(BaseDialog):
         )
 
     def _assign(self) -> None:
+        if self.ticket is None:
+            return
         AssignDialog(
             self, self.tickets, self.ticket, on_saved=lambda _t: self._changed()
         )
 
     def _status(self) -> None:
+        if self.ticket is None:
+            return
         StatusDialog(
             self, self.tickets, self.ticket, on_saved=lambda _t: self._changed()
         )

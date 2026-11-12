@@ -30,7 +30,7 @@ class AuditService:
             (ticket_id, action, details, actor or DEFAULT_ACTOR,
              to_iso(created_at or utc_now())),
         )
-        return int(cursor.lastrowid)
+        return int(cursor.lastrowid or 0)
 
     def log(
         self,

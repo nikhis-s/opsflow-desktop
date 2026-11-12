@@ -4,7 +4,12 @@ import unittest
 from datetime import timedelta
 
 from services.sla_engine import (
-    AT_RISK, BREACHED, MET, MISSED, ON_TRACK, calculate_deadlines,
+    AT_RISK,
+    BREACHED,
+    MET,
+    MISSED,
+    ON_TRACK,
+    calculate_deadlines,
 )
 from tests.helpers import NOW, ServiceTestCase
 
@@ -125,6 +130,8 @@ class EvaluationTests(ServiceTestCase):
         self.assertEqual(completed, 2)
         self.assertEqual(responded, 2)
         self.assertEqual(response, 100.0)
+        self.assertIsNotNone(resolution)
+        assert resolution is not None
         self.assertAlmostEqual(resolution, 50.0)
 
     def test_report_includes_every_ticket(self) -> None:

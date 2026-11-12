@@ -5,7 +5,7 @@ import unittest
 from datetime import timedelta
 from pathlib import Path
 
-from services.csv_service import CSVFormatError, TICKET_EXPORT_COLUMNS
+from services.csv_service import TICKET_EXPORT_COLUMNS, CSVFormatError
 from tests.helpers import NOW, ServiceTestCase
 
 

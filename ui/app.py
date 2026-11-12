@@ -4,13 +4,15 @@ from __future__ import annotations
 import logging
 import tkinter as tk
 import traceback
+from collections.abc import Callable
 from datetime import datetime
+from functools import partial
 from tkinter import messagebox
-from typing import Any, Callable
+from typing import Any
 
 from config import APP_NAME, APP_VERSION, DEFAULT_ACTOR
 from database import Database
-from models import AuditEvent, format_local, utc_now
+from models import format_local, utc_now
 from services.analytics import AnalyticsService
 from services.audit_service import AuditService
 from services.csv_service import CSVService
@@ -89,8 +91,10 @@ class OpsFlowApp:
         )
         self._tick_clock()
         self._schedule_scan()
-        self._schedule(800, lambda: self.run_escalation_scan(silent=True))
+        self._schedule(800, self._startup_scan)
 
+    def _startup_scan(self) -> None:
+        self.run_escalation_scan(silent=True)
     def _build_services(self, db: Database) -> dict[str, Any]:
         audit = AuditService(db)
         sla = SLAEngine(db, audit)
@@ -308,10 +312,10 @@ class OpsFlowApp:
         self.root.bind_all("<F5>", lambda _event: self.refresh_current())
         self.root.bind_all("<Control-r>", lambda _event: self.refresh_current())
         for index, (key, _label, _icon) in enumerate(NAV_ITEMS, start=1):
-            self.root.bind_all(
-                f"<Alt-Key-{index}>",
-                lambda _event, page_key=key: self.show_page(page_key),
-            )
+            self.root.bind_all(f"<Alt-Key-{index}>", partial(self._goto_page, key))
+
+    def _goto_page(self, key: str, _event: tk.Event) -> None:
+        self.show_page(key)
 
     def open_ticket_details(self, ticket_id: str,
                             on_changed: Callable[[], None] | None = None) -> None:
@@ -432,7 +436,8 @@ class OpsFlowApp:
         except tk.TclError:
             pass
 
-    def close(self) -> None:
+    def shutdown(self) -> None:
+        """Release the app's timers and widgets without closing the root window."""
         for job in (self._clock_job, self._scan_job):
             if not job:
                 continue
@@ -448,4 +453,11 @@ class OpsFlowApp:
             except tk.TclError:
                 pass
         self._timers.clear()
+        try:
+            self.shell.destroy()
+        except tk.TclError:
+            pass
+
+    def close(self) -> None:
+        self.shutdown()
         self.root.destroy()

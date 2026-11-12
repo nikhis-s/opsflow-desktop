@@ -8,19 +8,31 @@ from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
 from models import (
-    PRIORITIES, STATUSES, Ticket, format_local, human_duration, truncate, utc_now,
+    PRIORITIES,
+    STATUSES,
+    Ticket,
+    format_local,
+    truncate,
 )
 from services.csv_service import CSVFormatError
 from ui.components import (
-    Card, DataTable, Page, ScrollableFrame, SectionHeader, flat_button,
+    Card,
+    DataTable,
+    Page,
+    ScrollableFrame,
+    SectionHeader,
+    flat_button,
     ticket_row_tags,
 )
 from ui.dialogs import (
-    AssignDialog, CommentDialog, ConfirmDialog, ImportSummaryDialog,
-    StatusDialog, TicketDetailsDialog, TicketDialog,
+    AssignDialog,
+    CommentDialog,
+    ConfirmDialog,
+    ImportSummaryDialog,
+    StatusDialog,
+    TicketDialog,
 )
-from ui.theme import COLORS, FONTS, SLA_COLORS, px
-
+from ui.theme import COLORS, FONTS, px
 
 SORT_OPTIONS = {
     "Newest first": ("created_at", True),
@@ -81,7 +93,7 @@ class TicketsPage(Page):
         self.priority_var = tk.StringVar(value="All priorities")
         self.priority_combo = ttk.Combobox(
             filter_grid, textvariable=self.priority_var,
-            values=["All priorities"] + list(PRIORITIES), state="readonly",
+            values=["All priorities", *PRIORITIES], state="readonly",
         )
         self.priority_combo.grid(row=1, column=1, sticky="ew", padx=(0, px(8)))
         self.priority_combo.bind("<<ComboboxSelected>>", lambda _event: self.refresh())
@@ -89,7 +101,7 @@ class TicketsPage(Page):
         self.status_var = tk.StringVar(value="All statuses")
         self.status_combo = ttk.Combobox(
             filter_grid, textvariable=self.status_var,
-            values=["All statuses"] + list(STATUSES), state="readonly",
+            values=["All statuses", *STATUSES], state="readonly",
         )
         self.status_combo.grid(row=1, column=2, sticky="ew", padx=(0, px(8)))
         self.status_combo.bind("<<ComboboxSelected>>", lambda _event: self.refresh())
@@ -165,7 +177,7 @@ class TicketsPage(Page):
             self.action_buttons.append(button)
         self._update_action_state()
 
-        self.after(350, self._update_action_state)
+        self.schedule(350, self._update_action_state)
 
     # --------------------------------------------------------------- filters
     def _mapped_priority(self) -> str:
@@ -183,10 +195,10 @@ class TicketsPage(Page):
     def _schedule_search(self, _event: tk.Event | None = None) -> None:
         if self._search_job:
             try:
-                self.after_cancel(self._search_job)
+                self.cancel_scheduled(self._search_job)
             except tk.TclError:
                 pass
-        self._search_job = self.after(260, self.refresh)
+        self._search_job = self.schedule(260, self.refresh)
 
     def clear_filters(self) -> None:
         self.search_var.set("")
@@ -202,7 +214,7 @@ class TicketsPage(Page):
 
     # ---------------------------------------------------------------- refresh
     def on_show(self) -> None:
-        assignees = ["All assignees"] + self.app.services["tickets"].get_assignees()
+        assignees = ["All assignees", *self.app.services["tickets"].get_assignees()]
         self.assignee_combo.configure(values=assignees)
         if self.assignee_var.get() not in assignees:
             self.assignee_var.set("All assignees")

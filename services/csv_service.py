@@ -2,15 +2,20 @@
 from __future__ import annotations
 
 import csv
-from datetime import datetime
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 from config import DEFAULT_ACTOR
 from database import Database
 from models import (
-    ImportResult, ImportRowError, PRIORITIES, STATUSES, Ticket, format_local,
-    parse_user_timestamp, to_iso, utc_now,
+    PRIORITIES,
+    STATUSES,
+    ImportResult,
+    ImportRowError,
+    Ticket,
+    parse_user_timestamp,
+    to_iso,
 )
 from services.analytics import AnalyticsService
 from services.audit_service import AuditService
@@ -229,7 +234,7 @@ class CSVService:
 
         try:
             try:
-                handle = open(path, "r", newline="", encoding="utf-8-sig")
+                handle = open(path, newline="", encoding="utf-8-sig")
                 sample = handle.read(2048)
                 handle.seek(0)
                 delimiter = ","
@@ -239,7 +244,7 @@ class CSVService:
                     except csv.Error:
                         delimiter = ","
             except UnicodeDecodeError:
-                handle = open(path, "r", newline="", encoding="cp1252")
+                handle = open(path, newline="", encoding="cp1252")
                 delimiter = ","
             with handle:
                 reader = csv.DictReader(handle, delimiter=delimiter)
@@ -318,7 +323,7 @@ class CSVService:
                 result.skipped_duplicates += 1
             except (ValidationError, ValueError) as exc:
                 result.errors.append(ImportRowError(row_number, str(exc), data))
-            except Exception as exc:  # pragma: no cover - defensive database boundary
+            except Exception as exc:  # noqa: BLE001 - per-row database boundary
                 result.errors.append(ImportRowError(row_number, f"Database error: {exc}", data))
 
         self.audit.log(

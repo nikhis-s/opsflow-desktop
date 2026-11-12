@@ -1,4 +1,4 @@
-"""Escalation watchlist and immutable internal escalation history."""
+"""Escalation watchlist and append-only internal escalation history."""
 from __future__ import annotations
 
 import tkinter as tk
@@ -9,10 +9,16 @@ from typing import Any
 
 from models import EscalationEvent, format_local, human_duration, truncate
 from ui.components import (
-    Card, DataTable, KpiCard, Page, ScrollableFrame, SectionHeader,
-    bind_scroll_handoff, flat_button,
+    Card,
+    DataTable,
+    KpiCard,
+    Page,
+    ScrollableFrame,
+    SectionHeader,
+    bind_scroll_handoff,
+    flat_button,
 )
-from ui.theme import COLORS, FONTS, SLA_COLORS, px
+from ui.theme import COLORS, FONTS, px
 
 
 class EscalationsPage(Page):
@@ -232,10 +238,10 @@ class EscalationsPage(Page):
     def _schedule_search(self, _event: tk.Event | None = None) -> None:
         if self._search_job:
             try:
-                self.after_cancel(self._search_job)
+                self.cancel_scheduled(self._search_job)
             except tk.TclError:
                 pass
-        self._search_job = self.after(260, self.refresh_history)
+        self._search_job = self.schedule(260, self.refresh_history)
 
     def _clear_search(self) -> None:
         self.search_var.set("")

@@ -85,9 +85,11 @@ class DatabaseInitializationTests(unittest.TestCase):
         reopened = Database(self.path)
         reopened.initialize()
         self.assertEqual(reopened.schema_version, SCHEMA_VERSION)
-        self.assertIsNotNone(reopened.last_backup)
-        self.assertTrue(reopened.last_backup.exists())
-        self.assertIn("pre-migration", reopened.last_backup.name)
+        backup = reopened.last_backup
+        self.assertIsNotNone(backup)
+        assert backup is not None
+        self.assertTrue(backup.exists())
+        self.assertIn("pre-migration", backup.name)
 
     def test_newer_schema_is_refused(self) -> None:
         db = Database(self.path)
@@ -108,9 +110,11 @@ class DatabaseInitializationTests(unittest.TestCase):
         with self.assertRaises(DatabaseError) as caught:
             db.initialize()
         self.assertIn("unrecognized", str(caught.exception))
-        self.assertIsNotNone(db.last_backup)
-        self.assertTrue(db.last_backup.exists())
-        with closing(sqlite3.connect(str(db.last_backup))) as conn:
+        backup = db.last_backup
+        self.assertIsNotNone(backup)
+        assert backup is not None
+        self.assertTrue(backup.exists())
+        with closing(sqlite3.connect(str(backup))) as conn:
             self.assertEqual(
                 conn.execute("SELECT COUNT(*) FROM unrelated").fetchone()[0], 1
             )
@@ -121,9 +125,11 @@ class DatabaseInitializationTests(unittest.TestCase):
         with self.assertRaises(DatabaseError) as caught:
             db.initialize()
         self.assertIn("could not be read", str(caught.exception))
-        self.assertIsNotNone(db.last_backup)
-        self.assertTrue(db.last_backup.exists())
-        self.assertEqual(db.last_backup.read_bytes(), self.path.read_bytes())
+        backup = db.last_backup
+        self.assertIsNotNone(backup)
+        assert backup is not None
+        self.assertTrue(backup.exists())
+        self.assertEqual(backup.read_bytes(), self.path.read_bytes())
 
 
 class DatabaseTransactionTests(unittest.TestCase):

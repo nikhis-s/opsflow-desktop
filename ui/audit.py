@@ -9,8 +9,14 @@ from typing import Any
 
 from models import AuditEvent, format_local, parse_user_timestamp
 from ui.components import (
-    Card, DataTable, Page, ScrollableFrame, SectionHeader, audit_tag,
-    bind_scroll_handoff, flat_button,
+    Card,
+    DataTable,
+    Page,
+    ScrollableFrame,
+    SectionHeader,
+    audit_tag,
+    bind_scroll_handoff,
+    flat_button,
 )
 from ui.theme import COLORS, FONTS, px
 
@@ -27,7 +33,7 @@ class AuditPage(Page):
 
         header = SectionHeader(
             outer, "Audit trail",
-            "Immutable history of ticket creation, field changes, notes, SLA events and escalations.",
+            "Append-only history of ticket creation, field changes, notes, SLA events and escalations.",
         )
         header.pack(fill="x", pady=(0, px(14)))
         flat_button(header.actions, "Export audit CSV", self.export_audit,
@@ -125,7 +131,7 @@ class AuditPage(Page):
 
     # --------------------------------------------------------------- filters
     def on_show(self) -> None:
-        actions = ["All actions"] + self.app.services["audit"].actions()
+        actions = ["All actions", *self.app.services["audit"].actions()]
         self.action_combo.configure(values=actions)
         if self.action_var.get() not in actions:
             self.action_var.set("All actions")
@@ -134,10 +140,10 @@ class AuditPage(Page):
     def _schedule_search(self, _event: tk.Event | None = None) -> None:
         if self._search_job:
             try:
-                self.after_cancel(self._search_job)
+                self.cancel_scheduled(self._search_job)
             except tk.TclError:
                 pass
-        self._search_job = self.after(260, self.refresh)
+        self._search_job = self.schedule(260, self.refresh)
 
     def _parse_dates(self) -> tuple[datetime | None, datetime | None]:
         from_value = self.from_var.get().strip()

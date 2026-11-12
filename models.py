@@ -2,20 +2,21 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
-from enum import Enum
-from typing import Any, Iterable, Mapping
+from datetime import UTC, date, datetime
+from enum import StrEnum
+from typing import Any
 
 
-class Priority(str, Enum):
+class Priority(StrEnum):
     CRITICAL = "Critical"
     HIGH = "High"
     MEDIUM = "Medium"
     LOW = "Low"
 
 
-class Status(str, Enum):
+class Status(StrEnum):
     OPEN = "Open"
     IN_PROGRESS = "In Progress"
     PENDING = "Pending"
@@ -57,13 +58,13 @@ TICKET_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$")
 
 
 def utc_now() -> datetime:
-    return datetime.now(timezone.utc).replace(microsecond=0)
+    return datetime.now(UTC).replace(microsecond=0)
 
 
 def ensure_aware(value: datetime) -> datetime:
     if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
 
 
 def to_iso(value: datetime | str | None) -> str | None:
@@ -83,18 +84,18 @@ def parse_timestamp(value: str | datetime) -> datetime:
         text = text[:-1] + "+00:00"
     parsed = datetime.fromisoformat(text)
     if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
 
 
 def parse_user_timestamp(value: str | date | datetime) -> datetime:
     """Parse a friendly import/UI timestamp, interpreting naive values as local time."""
     if isinstance(value, datetime):
         if value.tzinfo is None:
-            return value.astimezone().astimezone(timezone.utc)
-        return value.astimezone(timezone.utc)
+            return value.astimezone().astimezone(UTC)
+        return value.astimezone(UTC)
     if isinstance(value, date):
-        return datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
+        return datetime(value.year, value.month, value.day, tzinfo=UTC)
     text = str(value).strip()
     if not text:
         raise ValueError("empty timestamp")
@@ -113,13 +114,13 @@ def parse_user_timestamp(value: str | date | datetime) -> datetime:
         parsed = datetime.fromisoformat(iso_text)
         if parsed.tzinfo is None:
             parsed = parsed.astimezone()
-        return parsed.astimezone(timezone.utc)
+        return parsed.astimezone(UTC)
     except ValueError:
         pass
     for fmt in candidates:
         try:
             parsed = datetime.strptime(text, fmt)
-            return parsed.astimezone().astimezone(timezone.utc)
+            return parsed.astimezone().astimezone(UTC)
         except ValueError:
             continue
     raise ValueError("expected ISO/date timestamp, e.g. 2026-05-01 14:30")
@@ -191,7 +192,7 @@ class Ticket:
     closed_at: datetime | None = None
 
     @classmethod
-    def from_row(cls, row: Mapping[str, Any]) -> "Ticket":
+    def from_row(cls, row: Mapping[str, Any]) -> Ticket:
         return cls(
             id=row["id"],
             title=row["title"],
@@ -233,7 +234,7 @@ class SLAPolicy:
     updated_at: datetime
 
     @classmethod
-    def from_row(cls, row: Mapping[str, Any]) -> "SLAPolicy":
+    def from_row(cls, row: Mapping[str, Any]) -> SLAPolicy:
         return cls(
             priority=row["priority"],
             response_minutes=int(row["response_minutes"]),
@@ -253,7 +254,7 @@ class TicketComment:
     created_at: datetime
 
     @classmethod
-    def from_row(cls, row: Mapping[str, Any]) -> "TicketComment":
+    def from_row(cls, row: Mapping[str, Any]) -> TicketComment:
         return cls(
             id=int(row["id"]),
             ticket_id=row["ticket_id"],
@@ -274,7 +275,7 @@ class AuditEvent:
     created_at: datetime
 
     @classmethod
-    def from_row(cls, row: Mapping[str, Any]) -> "AuditEvent":
+    def from_row(cls, row: Mapping[str, Any]) -> AuditEvent:
         return cls(
             id=int(row["id"]),
             ticket_id=row["ticket_id"],
@@ -296,7 +297,7 @@ class EscalationEvent:
     created_at: datetime
 
     @classmethod
-    def from_row(cls, row: Mapping[str, Any]) -> "EscalationEvent":
+    def from_row(cls, row: Mapping[str, Any]) -> EscalationEvent:
         return cls(
             id=int(row["id"]),
             ticket_id=row["ticket_id"],

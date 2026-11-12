@@ -1,38 +1,47 @@
 from __future__ import annotations
 
 import unittest
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from models import (
-    human_duration, duration_minutes, ensure_aware, format_local, parse_timestamp,
-    parse_user_timestamp, to_iso, truncate, utc_now,
+    duration_minutes,
+    ensure_aware,
+    format_local,
+    human_duration,
+    parse_timestamp,
+    parse_user_timestamp,
+    to_iso,
+    truncate,
+    utc_now,
 )
 
 
 class TimestampTests(unittest.TestCase):
     def test_to_iso_and_parse_round_trip(self) -> None:
-        value = datetime(2026, 5, 1, 12, 30, 15, tzinfo=timezone.utc)
+        value = datetime(2026, 5, 1, 12, 30, 15, tzinfo=UTC)
         text = to_iso(value)
+        self.assertIsNotNone(text)
+        assert text is not None
         self.assertEqual(text, "2026-05-01T12:30:15Z")
         self.assertEqual(parse_timestamp(text), value)
         self.assertIsNone(to_iso(None))
 
     def test_naive_values_are_treated_as_utc(self) -> None:
         parsed = parse_timestamp("2026-05-01 12:00:00")
-        self.assertEqual(parsed, datetime(2026, 5, 1, 12, 0, tzinfo=timezone.utc))
+        self.assertEqual(parsed, datetime(2026, 5, 1, 12, 0, tzinfo=UTC))
         self.assertEqual(ensure_aware(datetime(2026, 5, 1, 12, 0)),
-                         datetime(2026, 5, 1, 12, 0, tzinfo=timezone.utc))
+                         datetime(2026, 5, 1, 12, 0, tzinfo=UTC))
 
     def test_offset_timestamps_are_normalised(self) -> None:
         parsed = parse_timestamp("2026-05-01T14:00:00+02:00")
-        self.assertEqual(parsed, datetime(2026, 5, 1, 12, 0, tzinfo=timezone.utc))
+        self.assertEqual(parsed, datetime(2026, 5, 1, 12, 0, tzinfo=UTC))
         self.assertEqual(parsed.utcoffset(), timedelta(0))
 
     def test_parse_user_timestamp_formats(self) -> None:
         for raw in ("2026-05-01", "2026-05-01 09:30", "01/05/2026 09:30",
                     "2026-05-01T09:30:00", date(2026, 5, 1)):
             parsed = parse_user_timestamp(raw)
-            self.assertEqual(parsed.tzinfo, timezone.utc)
+            self.assertEqual(parsed.tzinfo, UTC)
         with self.assertRaises(ValueError):
             parse_user_timestamp("")
         with self.assertRaises(ValueError):

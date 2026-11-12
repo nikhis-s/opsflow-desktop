@@ -11,6 +11,7 @@ from __future__ import annotations
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import ttk
+from typing import Literal
 
 COLORS = {
     "bg": "#070D17",
@@ -67,6 +68,24 @@ SLA_COLORS = {
 
 FONTS: dict[str, tkfont.Font] = {}
 
+#: The type scale. Tk sizes are declared in points so they scale with the
+#: display; the theme's pixel scale factor handles spacing and geometry.
+FontWeight = Literal["normal", "bold"]
+
+FONT_SPECS: tuple[tuple[str, int, FontWeight], ...] = (
+    ("body", 10, "normal"),
+    ("small", 9, "normal"),
+    ("tiny", 8, "normal"),
+    ("micro", 7, "normal"),
+    ("medium", 10, "bold"),
+    ("semibold", 11, "bold"),
+    ("h1", 24, "bold"),
+    ("h2", 16, "bold"),
+    ("h3", 13, "bold"),
+    ("kpi", 30, "bold"),
+    ("mono", 9, "normal"),
+)
+
 #: Multiplier applied to design pixels. 1.0 at 96 DPI, 1.5 at 144 DPI, 2.0 at 192 DPI.
 SCALE: float = 1.0
 MIN_SCALE = 1.0
@@ -75,7 +94,7 @@ MAX_SCALE = 2.0
 
 def px(value: float) -> int:
     """Convert a design pixel value into a physical pixel value."""
-    return max(1, int(round(float(value) * SCALE)))
+    return max(1, round(float(value) * SCALE))
 
 
 def configure_scaling(root: tk.Misc) -> float:
@@ -126,19 +145,7 @@ def apply_theme(root: tk.Tk) -> ttk.Style:
     configure_scaling(root)
     family = _font_family(root)
     mono = _mono_family(root)
-    for name, size, weight in (
-        ("body", 10, "normal"),
-        ("small", 9, "normal"),
-        ("tiny", 8, "normal"),
-        ("micro", 7, "normal"),
-        ("medium", 10, "bold"),
-        ("semibold", 11, "bold"),
-        ("h1", 24, "bold"),
-        ("h2", 16, "bold"),
-        ("h3", 13, "bold"),
-        ("kpi", 30, "bold"),
-        ("mono", 9, "normal"),
-    ):
+    for name, size, weight in FONT_SPECS:
         FONTS[name] = tkfont.Font(root=root, family=mono if name == "mono" else family,
                                   size=size, weight=weight)
 

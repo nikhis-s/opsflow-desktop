@@ -68,7 +68,7 @@ class AuditTrailTests(ServiceTestCase):
         page_two = self.audit.list_events(limit=2, offset=2)
         self.assertEqual(len(page_one), 2)
         self.assertTrue(page_two)
-        self.assertTrue(set(event.id for event in page_one)
+        self.assertTrue({event.id for event in page_one}
                         .isdisjoint(event.id for event in page_two))
 
     def test_audit_survives_ticket_delete(self) -> None:

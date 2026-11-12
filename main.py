@@ -10,10 +10,9 @@ import logging
 import os
 import sys
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
 from config import APP_NAME, APP_VERSION, get_log_path
-from database import Database, DatabaseError
+from database import Database
 
 
 def enable_dpi_awareness() -> None:
@@ -116,6 +115,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         import tkinter as tk
+
         from ui.app import OpsFlowApp
         root = tk.Tk()
         OpsFlowApp(root, db)

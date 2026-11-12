@@ -1,16 +1,20 @@
 """Deterministic SLA calculations and policy management, independent of the GUI."""
 from __future__ import annotations
 
-import sqlite3
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Iterable, Mapping
 
 from config import DEFAULT_ACTOR
 from database import Database
 from models import (
-    DEFAULT_POLICIES, PRIORITIES, Priority, SLAPolicy, Ticket,
-    ensure_aware, parse_timestamp, to_iso, utc_now,
+    DEFAULT_POLICIES,
+    PRIORITIES,
+    SLAPolicy,
+    Ticket,
+    ensure_aware,
+    to_iso,
+    utc_now,
 )
 from services.audit_service import AuditService
 

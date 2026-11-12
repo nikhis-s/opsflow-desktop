@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 
 APP_NAME = "OpsFlow"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.1.0"
 DEFAULT_ACTOR = os.environ.get("OPSFLOW_ACTOR") or getpass.getuser() or "Operator"
 
 

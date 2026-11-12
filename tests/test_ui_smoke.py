@@ -7,21 +7,21 @@ from pathlib import Path
 
 from database import Database
 from models import utc_now
+from tests.tkroot import get_root, unavailable_reason
 
 try:  # Tk is not available in every CI/headless environment.
     import tkinter as tk
 except Exception:  # pragma: no cover - import guard
-    tk = None
+    tk = None  # type: ignore[assignment]
 
 
 @unittest.skipIf(tk is None, "tkinter is not available")
 class UISmokeTests(unittest.TestCase):
     def setUp(self) -> None:
-        try:
-            self.root = tk.Tk()
-        except Exception as exc:  # pragma: no cover - headless display
-            self.skipTest(f"Tk display unavailable: {exc}")
-        self.root.withdraw()
+        root = get_root()
+        if root is None:
+            self.skipTest(f"Tk display unavailable: {unavailable_reason()}")
+        self.root: tk.Tk = root
         self.tempdir = tempfile.TemporaryDirectory(prefix="opsflow-ui-test-")
         self.db = Database(Path(self.tempdir.name) / "opsflow-ui.db")
         self.db.initialize()
@@ -32,7 +32,7 @@ class UISmokeTests(unittest.TestCase):
 
     def tearDown(self) -> None:
         try:
-            self.app.close()
+            self.app.shutdown()
         except Exception:
             pass
         self.tempdir.cleanup()

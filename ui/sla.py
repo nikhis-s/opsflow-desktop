@@ -8,14 +8,23 @@ from tkinter import filedialog, messagebox, ttk
 from typing import Any
 
 from models import (
-    DEFAULT_POLICIES, PRIORITIES, duration_minutes, format_local, human_duration,
+    DEFAULT_POLICIES,
+    PRIORITIES,
+    format_local,
     truncate,
 )
 from ui.components import (
-    Badge, Card, DataTable, KpiCard, Page, ScrollableFrame, SectionHeader,
-    flat_button, ticket_row_tags,
+    Badge,
+    Card,
+    DataTable,
+    KpiCard,
+    Page,
+    ScrollableFrame,
+    SectionHeader,
+    flat_button,
+    ticket_row_tags,
 )
-from ui.theme import COLORS, FONTS, SLA_COLORS, px
+from ui.theme import COLORS, FONTS, px
 
 
 class SLAPage(Page):

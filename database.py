@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Iterator
 
 from config import APP_NAME, APP_VERSION, get_db_path
 from models import DEFAULT_POLICIES, utc_now

@@ -7,8 +7,14 @@ from typing import Any
 
 from database import Database
 from models import (
-    ACTIVE_STATUSES, PRIORITIES, STATUSES, AuditEvent, DashboardMetrics,
-    Priority, SLAReportRow, Status, Ticket, is_active_status, parse_timestamp,
+    PRIORITIES,
+    STATUSES,
+    AuditEvent,
+    DashboardMetrics,
+    SLAReportRow,
+    Status,
+    Ticket,
+    parse_timestamp,
     utc_now,
 )
 from services.audit_service import AuditService
@@ -32,8 +38,8 @@ class AnalyticsService:
         policies = self.sla.get_policies()
         evaluations = self.sla.evaluate_many(tickets, checked, policies)
 
-        status_counts = {status: 0 for status in STATUSES}
-        priority_counts = {priority: 0 for priority in PRIORITIES}
+        status_counts = dict.fromkeys(STATUSES, 0)
+        priority_counts = dict.fromkeys(PRIORITIES, 0)
         for ticket in tickets:
             status_counts[ticket.status] = status_counts.get(ticket.status, 0) + 1
             priority_counts[ticket.priority] = priority_counts.get(ticket.priority, 0) + 1
