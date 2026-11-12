@@ -1,0 +1,2 @@
+ticket_id,title,description,requester,assignee,category,priority,status,created_at,response_deadline,resolution_deadline
+TKT-9100,Example ticket title,Short description of the request.,Jordan Lee,Network Queue,Network,High,Open,2026-05-01 09:30,,

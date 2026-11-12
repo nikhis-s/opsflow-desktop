@@ -1,0 +1,9 @@
+ticket_id,title,description,requester,assignee,category,priority,status,created_at
+TKT-9201,Valid row before failures,Imports successfully before the bad rows.,Jordan Lee,Service Desk,General,High,Open,2026-11-11 10:00
+TKT-9202,,Description but no title,Jordan Lee,Service Desk,General,High,Open,2026-11-11 10:05
+TKT-9203,Missing requester row,A requester is required.,,Service Desk,General,Medium,Open,2026-11-11 10:10
+TKT-9204,Bad priority row,Priority must match a supported value.,Priya Nair,Service Desk,General,Urgent,Open,2026-11-11 10:15
+TKT-9205,Bad status row,Status must match a supported value.,Marcus Webb,Service Desk,General,Low,Waiting,2026-11-11 10:20
+TKT-9206,Bad timestamp row,Timestamp must be parseable.,Elena Rossi,Service Desk,General,Medium,Open,not-a-date
+TKT-9201,Duplicate id row,This row is skipped as a duplicate.,Tom Chen,Service Desk,General,Low,Open,2026-11-11 10:25
+TKT-9207,Valid row after rejected rows,This row imports successfully.,Aisha Khan,Service Desk,General,Medium,Open,2026-11-11 10:30

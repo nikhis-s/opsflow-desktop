@@ -1,0 +1,7 @@
+ticket_id,title,description,requester,assignee,category,priority,status,created_at,first_response_at,resolved_at,closed_at
+TKT-9001,VPN disconnects every few minutes,Remote access drops during calls and screen shares.,Jordan Lee,Network Queue,Network,High,In Progress,2026-11-11 08:15,2026-11-11 08:42,,
+TKT-9002,Replacement laptop battery swelling,Device is warming up and the trackpad is lifting.,Priya Nair,Hardware Bench,Hardware,Critical,Open,2026-11-11 09:05,,,
+TKT-9003,Finance shared drive is read-only,Month-end close team cannot update spreadsheets.,Marcus Webb,Storage Team,Storage,High,Open,2026-11-11 09:40,,,
+TKT-9004,New starter access request,Accounts and badge access for Monday onboarding.,Elena Rossi,Service Desk,Access,Medium,Pending,2026-11-10 14:20,,,
+TKT-9005,Conference room display flickers,Intermittent signal loss on the HDMI input.,Tom Chen,Facilities Tech,Facilities,Low,Resolved,2026-11-09 11:10,2026-11-09 11:35,2026-11-09 15:20,
+TKT-9006,Phishing report from finance,User forwarded a suspicious invoice attachment.,Aisha Khan,Security Ops,Security,Critical,Closed,2026-11-08 16:00,2026-11-08 16:06,2026-11-08 17:12,2026-11-09 09:00
