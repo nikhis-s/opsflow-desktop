@@ -189,11 +189,13 @@ python -m pip install -r requirements-dev.txt
 | `python -m pytest -q` | the full test suite |
 | `python -m unittest discover -q` | the same suite through the stdlib runner |
 | `ruff check .` | lint (configured in `pyproject.toml`) |
-| `mypy` | static type checking (configured in `pyproject.toml`) |
+| `mypy --platform linux` | static type checking for Linux |
+| `mypy --platform win32` | static type checking for Windows |
+| `mypy --platform darwin` | static type checking for macOS |
 | `python main.py --check` | database initialization and health diagnostics |
 | `python tools/smoke_launch.py` | launches the real window, renders every page, closes it |
 
-`ruff` and `mypy` are both clean on the current tree.
+`ruff` and `mypy` are both clean on the current tree, on all three platforms.
 
 ## Tests
 
@@ -218,7 +220,10 @@ Linux box it runs under `xvfb-run`.
 
 `.github/workflows/ci.yml` runs on every push and pull request:
 
-- **quality** — `ruff check` and `mypy` on the full tree.
+- **quality** — `ruff check`, plus `mypy` run separately for the Linux, Windows
+  and macOS targets. Platform-specific APIs such as `os.startfile` and
+  `ctypes.windll` only exist on some platforms, so checking one platform
+  would hide real errors on the others.
 - **test** — `pytest` and `unittest` across Python 3.11 and 3.12 on Ubuntu,
   Windows and macOS, plus the `main.py --check` diagnostics.
 - **launch** — `tools/smoke_launch.py` starts the real desktop application on

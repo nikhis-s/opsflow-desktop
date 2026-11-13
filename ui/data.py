@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 import tkinter as tk
 from collections.abc import Callable
 from datetime import datetime
@@ -278,9 +279,9 @@ class DataPage(Page):
     def open_folder(self) -> None:
         path = self.app.services["db"].path.parent
         try:
-            if os.name == "nt":
+            if sys.platform == "win32":
                 os.startfile(str(path))
-            elif os.uname().sysname == "Darwin":  # type: ignore[attr-defined]
+            elif sys.platform == "darwin":
                 subprocess.Popen(["open", str(path)])
             else:
                 subprocess.Popen(["xdg-open", str(path)])

@@ -27,11 +27,12 @@ def enable_dpi_awareness() -> None:
     try:
         import ctypes
 
-        try:
-            # PROCESS_PER_MONITOR_DPI_AWARE (Windows 8.1+).
-            ctypes.windll.shcore.SetProcessDpiAwareness(2)
-        except Exception:
-            ctypes.windll.user32.SetProcessDPIAware()
+        if sys.platform == "win32":
+            try:
+                # PROCESS_PER_MONITOR_DPI_AWARE (Windows 8.1+).
+                ctypes.windll.shcore.SetProcessDpiAwareness(2)
+            except Exception:
+                ctypes.windll.user32.SetProcessDPIAware()
     except Exception:
         pass
 

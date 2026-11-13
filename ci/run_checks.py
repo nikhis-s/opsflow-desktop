@@ -30,7 +30,9 @@ def run(label: str, command: list[str]) -> bool:
 def main() -> int:
     checks: list[tuple[str, list[str]]] = [
         ("Lint (ruff)", [sys.executable, "-m", "ruff", "check", "."]),
-        ("Type check (mypy)", [sys.executable, "-m", "mypy"]),
+        ("Type check (mypy, Linux)", [sys.executable, "-m", "mypy", "--platform", "linux"]),
+        ("Type check (mypy, Windows)", [sys.executable, "-m", "mypy", "--platform", "win32"]),
+        ("Type check (mypy, macOS)", [sys.executable, "-m", "mypy", "--platform", "darwin"]),
         ("Tests (pytest)", [sys.executable, "-m", "pytest", "-q"]),
         ("Tests (unittest)", [sys.executable, "-m", "unittest", "discover", "-q"]),
         ("Application self-check", [sys.executable, "main.py", "--check"]),

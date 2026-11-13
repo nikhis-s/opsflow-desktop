@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import getpass
 import os
+import sys
 from pathlib import Path
 
 APP_NAME = "OpsFlow"
@@ -15,10 +16,10 @@ def get_data_dir() -> Path:
     override = os.environ.get("OPSFLOW_DATA_DIR")
     if override:
         path = Path(override).expanduser()
-    elif os.name == "nt":
+    elif sys.platform == "win32":
         base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
         path = base / APP_NAME
-    elif os.uname().sysname == "Darwin":  # type: ignore[attr-defined]
+    elif sys.platform == "darwin":
         path = Path.home() / "Library" / "Application Support" / APP_NAME
     else:
         base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
