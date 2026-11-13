@@ -216,6 +216,11 @@ closes cleanly.
 The suite needs no display server beyond a normal desktop session. On a headless
 Linux box it runs under `xvfb-run`.
 
+The Tk GUI tests run on **Linux (Xvfb) and Windows**. GitHub's macOS runners do
+not complete the deferred-focus path in the dialog tests, so macOS runs the
+headless suite and is covered by the launch job instead, which starts the real
+application there. The skip is declared once, in `tests/tkroot.py`.
+
 ## Continuous integration
 
 `.github/workflows/ci.yml` runs on every push and pull request:
