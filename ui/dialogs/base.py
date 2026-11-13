@@ -55,6 +55,8 @@ class BaseDialog(ManagedTimers, tk.Toplevel):
         self.resizable(resizable, resizable)
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.bind("<Escape>", lambda _event: self.close())
+        # tkinter's grab_set() takes a *local* grab, which keeps the dialog
+        # modal to this application without taking a global grab.
         try:
             self.grab_set()
         except tk.TclError:
@@ -100,8 +102,27 @@ class BaseDialog(ManagedTimers, tk.Toplevel):
         self.minsize(min(px(width), self._width), min(px(height), self._height))
 
     def _safe_focus(self) -> None:
+        """Take keyboard focus, but only once the dialog is really on screen.
+
+        Forcing focus on a window that is not viewable blocks on macOS, so the
+        call is skipped until the dialog has been mapped.
+        """
         try:
+            if not self.winfo_viewable():
+                return
             self.focus_force()
+        except tk.TclError:
+            pass
+
+    def focus_later(self, widget: tk.Misc, delay: int = 100) -> None:
+        """Move keyboard focus to a widget once the dialog is on screen."""
+        self.schedule(delay, self._focus_widget, widget)
+
+    def _focus_widget(self, widget: tk.Misc) -> None:
+        try:
+            if not self.winfo_viewable():
+                return
+            widget.focus_set()
         except tk.TclError:
             pass
 

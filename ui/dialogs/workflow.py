@@ -43,7 +43,7 @@ class AssignDialog(BaseDialog):
         flat_button(self.buttons, "Cancel", self.close, "ghost").pack(side="right")
         flat_button(self.buttons, "Assign ticket", self.save, "primary").pack(
             side="right", padx=(0, px(8)))
-        self.schedule(100, self.combo.focus_set)
+        self.focus_later(self.combo)
 
     def save(self) -> None:
         self.clear_error()
@@ -89,7 +89,7 @@ class StatusDialog(BaseDialog):
         flat_button(self.buttons, "Cancel", self.close, "ghost").pack(side="right")
         flat_button(self.buttons, "Update status", self.save, "primary").pack(
             side="right", padx=(0, px(8)))
-        self.schedule(100, self.combo.focus_set)
+        self.focus_later(self.combo)
 
     def save(self) -> None:
         self.clear_error()
@@ -135,7 +135,7 @@ class CommentDialog(BaseDialog):
         flat_button(self.buttons, "Cancel", self.close, "ghost").pack(side="right")
         flat_button(self.buttons, "Add note", self.save, "primary").pack(
             side="right", padx=(0, px(8)))
-        self.schedule(120, self.note.focus_set)
+        self.focus_later(self.note, 120)
 
     def save(self) -> None:
         self.clear_error()
