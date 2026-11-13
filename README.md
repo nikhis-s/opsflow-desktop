@@ -1,7 +1,5 @@
 # OpsFlow
 
-[![CI](https://github.com/nikhis-s/opsflow-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/nikhis-s/opsflow-desktop/actions/workflows/ci.yml)
-
 OpsFlow is a fully offline, Python-only desktop application for operations ticket
 management. It combines a ticket queue, deterministic SLA tracking, escalation
 history, an append-only audit trail, analytics, and validated CSV import/export in a
@@ -12,10 +10,12 @@ and no external notification channel. Everything runs locally against SQLite.
 
 ## Requirements
 
-- Python **3.11 or newer** (developed and tested on Python 3.12.10)
+- Python **3.11 or newer** (developed on 3.12.10; CI covers 3.11 and 3.12 on
+  Linux, Windows and macOS)
 - Tkinter, included with the standard Windows/macOS Python installers and available
   through the `python3-tk` package on most Linux distributions
 - No third-party packages are required at runtime
+
 ## Launch
 
 From the project root:
@@ -125,13 +125,40 @@ opsflow/
 │   ├── escalations.py
 │   ├── audit.py
 │   ├── data.py
-│   └── dialogs.py             # create/edit/assign/status/note/detail dialogs
-├── tests/                     # unittest suite (93 tests)
+│   └── dialogs/               # modal dialogs, one module per concern
+│       ├── base.py            # themed frame, header, footer, shared widgets
+│       ├── ticket.py          # create / edit ticket
+│       ├── workflow.py        # assign, change status, add note
+│       ├── confirm.py         # destructive-action confirmation
+│       ├── import_summary.py  # CSV import report
+│       └── details.py         # ticket details, SLA meters, activity
+├── tests/                     # unittest suite (99 tests)
 └── sample_data/
     ├── operations_import.csv  # valid import example
     ├── import_template.csv    # header and one example row
     └── invalid_import.csv     # demonstrates per-row rejection reporting
 ```
+
+## Architecture
+
+The code is layered so that the domain logic never imports Tkinter. That is what
+makes the whole rule set testable without a display.
+
+| Layer | Module | Responsibility |
+| --- | --- | --- |
+| Domain | `models.py` | enums, dataclasses, UTC time handling and formatting |
+| Persistence | `database.py` | schema, migrations, transactions, backups, health |
+| Services | `services/` | ticket lifecycle, SLA evaluation, escalation detection, audit, CSV, analytics |
+| Presentation | `ui/` | the Tkinter shell, pages, components and dialogs |
+| Entry point | `main.py` | CLI parsing, logging, DPI setup, application wiring |
+
+Two rules keep the layers honest, and both are enforced by
+`tests/test_architecture.py` — the checks fail the moment a module reaches
+across a boundary:
+
+- **`services/` never imports `ui/` or `tkinter`.** The domain rules are
+  exercised directly by the unit tests, with no window in sight.
+- **`ui/` never writes SQL.** Pages call services; services own the queries.
 
 ## CSV import
 
@@ -176,10 +203,11 @@ python -m unittest discover -v
 
 The suite covers models, database initialization/migration/backup, ticket
 lifecycle, SLA evaluation and compliance, escalation deduplication, audit history,
-analytics, CSV import/export validation, and the Tkinter UI layer. The UI tests
-build the real application shell, open every page, exercise an SLA scan, check
-mouse-wheel routing and construct every modal dialog to confirm it opens, lays
-itself out within the screen bounds and closes cleanly.
+analytics, CSV import/export validation, the Tkinter UI layer, and the
+architecture rules above. The UI tests build the real application shell, open
+every page, exercise an SLA scan, check mouse-wheel routing and construct every
+modal dialog to confirm it opens, lays itself out within the screen bounds and
+closes cleanly.
 
 The suite needs no display server beyond a normal desktop session. On a headless
 Linux box it runs under `xvfb-run`.
@@ -193,6 +221,12 @@ Linux box it runs under `xvfb-run`.
   Windows and macOS, plus the `main.py --check` diagnostics.
 - **launch** — `tools/smoke_launch.py` starts the real desktop application on
   each platform and verifies the window, every page and a clean shutdown.
+
+The same gates run locally with one command:
+
+```powershell
+python ci/run_checks.py
+```
 
 ## Known limitations
 
