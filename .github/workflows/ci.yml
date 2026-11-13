@@ -34,8 +34,17 @@ jobs:
       - name: Ruff (lint)
         run: ruff check .
 
-      - name: Mypy (type check)
-        run: mypy
+      # Type-check for every platform we ship on. Platform-specific APIs such
+      # as os.startfile and ctypes.windll only exist on some platforms, so
+      # checking a single platform would hide real errors on the others.
+      - name: Mypy (type check, Linux)
+        run: mypy --platform linux
+
+      - name: Mypy (type check, Windows)
+        run: mypy --platform win32
+
+      - name: Mypy (type check, macOS)
+        run: mypy --platform darwin
 
   test:
     name: ${{ matrix.os }} · Python ${{ matrix.python-version }}
