@@ -1,5 +1,7 @@
 # OpsFlow
 
+[![CI](https://github.com/nikhis-s/opsflow-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/nikhis-s/opsflow-desktop/actions/workflows/ci.yml)
+
 OpsFlow is a fully offline, Python-only desktop application for operations ticket
 management. It combines a ticket queue, deterministic SLA tracking, escalation
 history, an append-only audit trail, analytics, and validated CSV import/export in a
