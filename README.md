@@ -113,6 +113,8 @@ opsflow/
 │   └── csv_service.py         # validated import and report export
 ├── tools/
 │   └── smoke_launch.py        # launch the GUI, render every page, close it
+├── ci/
+│   └── run_checks.py          # run every quality gate in one command
 ├── ui/
 │   ├── app.py                 # shell, sidebar, shortcuts, scheduled scans
 │   ├── theme.py               # dark navy/cyan theme, ttk styles, DPI scaling
@@ -154,6 +156,7 @@ python -m pip install -r requirements-dev.txt
 
 | Command | What it checks |
 | --- | --- |
+| `python ci/run_checks.py` | **every check below, in one command** |
 | `python -m pytest -q` | the full test suite |
 | `python -m unittest discover -q` | the same suite through the stdlib runner |
 | `ruff check .` | lint (configured in `pyproject.toml`) |
