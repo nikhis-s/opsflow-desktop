@@ -18,6 +18,7 @@ jobs:
   quality:
     name: Lint and type check
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -49,6 +50,8 @@ jobs:
   test:
     name: ${{ matrix.os }} · Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
+    # Fail fast rather than block a runner for hours if a UI test hangs.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -95,6 +98,7 @@ jobs:
   launch:
     name: Native launch · ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
