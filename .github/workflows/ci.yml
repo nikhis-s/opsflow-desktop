@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint and type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Ruff (lint)
+        run: ruff check .
+
+      - name: Mypy (type check)
+        run: mypy
+
+  test:
+    name: ${{ matrix.os }} · Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Tk and a virtual display (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y python3-tk xvfb
+
+      - name: Install development dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-dev.txt
+
+      - name: Unit tests (pytest)
+        if: runner.os != 'Linux'
+        run: python -m pytest -q
+
+      - name: Unit tests (pytest, virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum python -m pytest -q
+
+      - name: Unit tests (unittest)
+        if: runner.os != 'Linux'
+        run: python -m unittest discover -q
+
+      - name: Unit tests (unittest, virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum python -m unittest discover -q
+
+      - name: Application self-check
+        run: python main.py --check
+
+  launch:
+    name: Native launch · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Tk and a virtual display (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y python3-tk xvfb
+
+      - name: Launch the desktop application
+        if: runner.os != 'Linux'
+        run: python tools/smoke_launch.py
+
+      - name: Launch the desktop application (virtual display)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum python tools/smoke_launch.py
