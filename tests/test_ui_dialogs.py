@@ -13,7 +13,7 @@ from pathlib import Path
 
 from database import Database
 from models import ImportResult, ImportRowError
-from tests.tkroot import get_root, unavailable_reason
+from tests.tkroot import GUI_TESTS_SUPPORTED, get_root, unavailable_reason
 
 try:  # Tk is not available in every CI/headless environment.
     import tkinter as tk
@@ -22,6 +22,7 @@ except Exception:  # pragma: no cover - import guard
 
 
 @unittest.skipIf(tk is None, "tkinter is not available")
+@unittest.skipIf(not GUI_TESTS_SUPPORTED, "Tk GUI tests are not run on macOS CI runners")
 class DialogTests(unittest.TestCase):
     def setUp(self) -> None:
         root = get_root()
